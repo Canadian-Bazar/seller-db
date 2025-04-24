@@ -1,0 +1,358 @@
+import bcrypt from 'bcrypt'
+import { matchedData } from 'express-validator'
+import httpStatus from 'http-status'
+import jwt from 'jsonwebtoken'
+import otpGenerator from 'otp-generator'
+
+import sendMail from '../helpers/sendMail.js'
+import Roles from '../models/role.schema.js'
+import Seller from '../models/seller.schema.js'
+import Verifications from '../models/verification.schema.js'
+import buildErrorObject from '../utils/buildErrorObject.js'
+import buildResponse from '../utils/buildResponse.js'
+import decrypt from '../utils/decrypt.js'
+import generateForgotToken from '../utils/generate-forgot-token.js'
+import generateTokens from '../utils/generateTokens.js'
+import handleError from '../utils/handleError.js'
+import isIDGood from '../utils/isIDGood.js'
+
+/**
+ * Controller: signupController
+ * Description: Handles seller registration by creating a new seller in the database.
+ */
+export const signupController = async (req, res) => {
+  try {
+    req = matchedData(req)
+    const existingSeller = await Seller.findOne({ email: req.email }).lean()
+    if (existingSeller?._id) {
+      throw buildErrorObject(httpStatus.CONFLICT, 'Seller Already Exists')
+    }
+
+    const sellerRole = await Roles.findOne({ role: 'seller' }).lean()
+    if (!sellerRole) {
+      throw buildErrorObject(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Unable to assign seller role. Please try again later.'
+      )
+    }
+    req.roleId = sellerRole._id
+
+    await Seller.create(req)
+
+    res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED, {
+      message: 'Seller Created Successfully',
+    }))
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: loginController
+ * Description: Authenticates a seller and generates access and refresh tokens.
+ */
+export const loginController = async (req, res) => {
+  try {
+    req = matchedData(req)
+    let seller = await Seller.findOne({ email: req.email }).select('password loginAttempts blockExpires approvalStatus')
+
+    if (!seller?._id) {
+      throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
+    }
+
+    // Check if seller is approved
+    if (seller.approvalStatus !== 'approved') {
+      throw buildErrorObject(
+        httpStatus.UNAUTHORIZED, 
+        `Your seller account is ${seller.approvalStatus}. Please wait for admin approval.`
+      )
+    }
+
+    if (!await bcrypt.compare(req.password, seller.password)) {
+      const loginAttempts = seller.loginAttempts || 0 + 1
+      const blockExpires = new Date(new Date().getTime() + 30 * 60000)
+      if (seller.blockExpires > new Date()) {
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'USER BLOCKED')
+      }
+
+      if (loginAttempts >= 5) {
+        seller.loginAttempts = loginAttempts
+        seller.blockExpires = blockExpires
+        await seller.save()
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'USER BLOCKED')
+      }
+
+      seller.loginAttempts = loginAttempts
+      await seller.save()
+      throw buildErrorObject(httpStatus.UNAUTHORIZED, 'INVALID CREDENTIALS')
+    }
+
+    if (seller.blockExpires > new Date()) {
+      throw buildErrorObject(httpStatus.UNAUTHORIZED, 'USER BLOCKED')
+    }
+    seller.loginAttempts = 0
+    await seller.save()
+    seller = await Seller.findById(seller._id).lean()
+    const { accessToken, refreshToken } = generateTokens(seller)
+    res
+      .cookie('accessToken', accessToken, {
+        httpOnly: process.env.NODE_ENV === 'development',
+        secure: !process.env.NODE_ENV === 'development',
+      })
+      .cookie('refreshToken', refreshToken, {
+        httpOnly: process.env.NODE_ENV === 'development',
+        secure: !process.env.NODE_ENV === 'development',
+      })
+      .status(httpStatus.ACCEPTED)
+      .json(buildResponse(httpStatus.ACCEPTED, seller))
+
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: logoutController
+ * Description: Logs out the seller by clearing authentication cookies.
+ */
+export const logoutController = async (req, res) => {
+  try {
+    res
+      .clearCookie('accessToken', {
+        httpOnly: process.env.NODE_ENV === 'development',
+        secure: !process.env.NODE_ENV === 'development',
+      })
+      .clearCookie('refreshToken', {
+        httpOnly: process.env.NODE_ENV === 'development',
+        secure: !process.env.NODE_ENV === 'development',
+      })
+      .status(httpStatus.NO_CONTENT)
+      .json(buildResponse(httpStatus.NO_CONTENT))
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: verifyTokensController
+ * Description: Verifies the validity of the seller's access and refresh tokens.
+ */
+export const verifyTokensController = async (req, res) => {
+  try {
+    let accessToken = req.cookies.accessToken
+    let refreshToken = req.cookies.refreshToken
+
+    if (!accessToken) {
+      throw buildErrorObject(httpStatus.UNAUTHORIZED, 'ACCESS_TOKEN_MISSING')
+    }
+
+    accessToken = decrypt(accessToken)
+
+    try {
+      jwt.verify(accessToken, process.env.AUTH_SECRET)
+
+      res
+        .status(httpStatus.OK)
+        .json(buildResponse(httpStatus.OK, {
+          success: true,
+          message: 'Access token is valid',
+        }))
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        if (!refreshToken) {
+          throw buildErrorObject(httpStatus.UNAUTHORIZED, 'REFRESH_TOKEN_MISSING')
+        }
+
+        refreshToken = decrypt(refreshToken)
+
+        try {
+          let seller = jwt.verify(refreshToken, process.env.REFRESH_SECRET)
+
+          seller = {
+            _id: seller._id,
+            email: seller.email,
+            companyName: seller.companyName,
+            roleId: seller.roleId,
+          }
+
+          const { accessToken } = generateTokens(seller)
+
+          res
+            .cookie('accessToken', accessToken, {
+              httpOnly: process.env.NODE_ENV === 'development',
+              secure: !process.env.NODE_ENV === 'development',
+            })
+            .status(httpStatus.CREATED)
+            .json(buildResponse(httpStatus.CREATED, {
+              success: true,
+              message: 'Access token generated successfully',
+            }))
+        } catch (err) {
+          throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Session expired, please login again to continue')
+        }
+      } else {
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Tokens were malformed')
+      }
+    }
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: sendOtpController
+ * Description: Sends an OTP (One Time Password) to the seller's email for verification.
+ */
+export const sendOtpController = async (req, res) => {
+  try {
+    const requestData = matchedData(req)
+
+    const seller = await Seller.findOne({
+      email: requestData.email.toString(),
+    }).lean()
+    if (seller?._id) {
+      throw buildErrorObject(httpStatus.CONFLICT, 'Seller Already Exists')
+    }
+
+    const otp = otpGenerator.generate(4, {
+      lowerCaseAlphabets: false,
+      upperCaseAlphabets: false,
+      specialChars: false,
+      digits: true,
+    })
+
+    const validTill = new Date(new Date().getTime() + 30 * 60000)
+
+    sendMail(requestData.email, 'register.ejs', {
+      subject: 'Verification OTP',
+      otp,
+    })
+
+    await Verifications.findOneAndUpdate(
+      { email: requestData.email },
+      { otp, validTill },
+      { upsert: true }
+    )
+
+    res
+      .status(httpStatus.OK)
+      .json(buildResponse(httpStatus.OK, { message: 'OTP_SENT' }))
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: verifyOtpController
+ * Description: Verifies a seller's OTP (One Time Password).
+ */
+export const verifyOtpController = async(req, res) => {
+  try {
+    req = matchedData(req)
+
+    const verification = await Verifications.findOne({ email: req.email })
+    if (!verification) {
+      throw buildErrorObject(
+        httpStatus.NOT_FOUND,
+        'No OTP found for this email. Please request a new OTP.'
+      )
+    }
+
+    if (parseInt(req.otp) !== parseInt(verification.otp)) {
+      throw buildErrorObject(
+        httpStatus.UNAUTHORIZED,
+        'The OTP you entered is incorrect. Please try again.'
+      )
+    }
+
+    // For existing sellers, update verification status
+    const seller = await Seller.findOne({ email: req.email })
+    if (seller) {
+      seller.isVerified = true
+      await seller.save()
+    }
+
+    res.status(httpStatus.ACCEPTED).json(
+      buildResponse(httpStatus.ACCEPTED, {
+        message: 'Verification successful. Your account is now verified.',
+      })
+    )
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: generateForgotPasswordTokenController
+ * Description: Handles the "forgot password" functionality for sellers.
+ */
+export const generateForgotPasswordTokenController = async(req, res) => {
+  try {
+    req = matchedData(req)
+
+    const seller = await Seller.findOne({email: req.email}).select('_id email companyName').lean()
+    
+    if (seller) {
+      const forgotPasswordToken = generateForgotToken(seller) 
+
+      sendMail(req.email, 'forgot-password.ejs', {
+        token: forgotPasswordToken,
+        subject: 'Forgot password',
+        companyName: seller.companyName,
+        frontendURL: process.env.FRONTEND_URL,
+      })
+    }
+
+    // Always return success to prevent email enumeration
+    res.status(httpStatus.OK).json(
+      buildResponse(httpStatus.OK, {
+        message: 'Reset Password Link Sent Successfully'
+      }))
+  } catch(err) {
+    handleError(res, err)
+  }
+}
+
+/**
+ * Controller: resetPasswordController
+ * Description: Handles the "reset password" functionality for sellers.
+ */
+export const resetPasswordController = async(req, res) => {
+  try {
+    req = matchedData(req)
+    const {forgotToken, newPassword} = req 
+    const decryptedToken = decrypt(forgotToken)
+
+    let seller 
+    
+    try {
+      seller = jwt.verify(decryptedToken, process.env.FORGOT_SECRET)
+    } catch(err) {
+      return res.status(httpStatus.UNAUTHORIZED).json(
+        buildResponse(httpStatus.UNAUTHORIZED, {
+          success: false,
+          message: 'Token Expired'
+        })
+      )
+    }
+
+    const sellerId = await isIDGood(seller._id)
+    seller = await Seller.findById(sellerId)
+    
+    if (!seller) {
+      throw buildErrorObject(httpStatus.NOT_FOUND, 'Seller not found')
+    }
+    
+    seller.password = newPassword
+    await seller.save()
+
+    res.status(httpStatus.ACCEPTED).json(
+      buildResponse(httpStatus.ACCEPTED, {
+        success: true,
+        message: 'Password Changed Successfully'
+      })
+    )
+  } catch(err) {
+    handleError(res, err)
+  }
+}
