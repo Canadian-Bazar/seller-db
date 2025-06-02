@@ -7,6 +7,8 @@ import { send } from 'process';
 import sendNotification from '../helpers/sendNotification.js';
 import notificationMessages from '../utils/notificationMessages.js';
 import { matchedData } from 'express-validator';
+import Chat from '../models/chat.schema.js'
+import Message from '../models/messages.schema.js'
 
 /**
  * Retrieves a paginated list of quotations.
@@ -127,64 +129,132 @@ export const getAllQuotationsController = async (req, res) => {
  })
 */
 
-export const mutateQuotationStatusController = async (req , res)=>{
-    try{
-        const validatedData = matchedData(req) ;
-        const { quotationId , status } = validatedData ;
+export const mutateQuotationStatusController = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { quotationId, status } = validatedData;
 
-        const quotation = await Quotation.findOne({ _id: quotationId , status: {$in:['in-progress' , 'sent']} , seller:req.user._id }).populate('seller')
+        // Find quotation with valid status and belonging to the current seller
+        const quotation = await Quotation.findOne({ 
+            _id: quotationId, 
+            status: { $in: ['in-progress', 'sent'] }, 
+            seller: req.user._id 
+        }).populate('seller');
+        
         if (!quotation) {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Quotation not found or already processed');
         }
 
-        quotation.status = status ;
-        await quotation.save() ;
+        // Update quotation status
+        quotation.status = status;
+        await quotation.save();
 
-        console.log("----" , quotation)
-
-         
-
-
-        const  buyer= quotation.buyer ,
-        seller = quotation.seller._id
-        let type='quote_accepted' ;
-    
-        let content ="" ;
-        if(status === 'accepted'){
-            content = notificationMessages.buyer.quotationAccepted ;
-        }else{
-            type = 'quote_rejected' ;
-
-            content = notificationMessages.buyer.quotationRejected ;
-
+        // Get buyer and seller IDs
+        const buyer = quotation.buyer;
+        const seller = quotation.seller._id;
+        
+        // Find or create chat between buyer and seller
+        let existingChat = await Chat.findOne({ buyer, seller });
+        if (!existingChat) {
+            existingChat = await Chat.create({ 
+                buyer, 
+                seller,
+                quotation: quotationId,
+                status: 'active',
+                unreadBy: 'buyer'
+            });
         }
 
-        const data = {
-            recipient: buyer ,
-            sender:{
-                model:'Seller' ,
-                id:seller ,
-                name: quotation.seller.companyName ,
+        let messageContent;
+        let messageType;
+        let notificationType;
+        let notificationContent;
+
+        if (status === 'accepted') {
+            messageContent = "I've accepted your quotation request. Let's proceed with the next steps.";
+            messageType = 'text';
+            notificationType = 'quote_accepted';
+            notificationContent = notificationMessages.buyer.quotationAccepted;
+            
+            await Message.create({
+                senderId: seller,
+                senderModel: 'Seller',
+                content: 'Quotation Accepted',
+                chat: existingChat._id,
+                quotationId: quotation._id,
+                messageType: 'quotation_accepted',
+                isRead: false
+            });
+        } else if (status === 'rejected') {
+            messageContent = "I'm unable to proceed with this quotation at this time.";
+            messageType = 'text';
+            notificationType = 'quote_rejected';
+            notificationContent = notificationMessages.buyer.quotationRejected;
+            
+            await Message.create({
+                senderId: seller,
+                senderModel: 'Seller',
+                content: 'Quotation Rejected',
+                chat: existingChat._id,
+                quotationId: quotation._id,
+                messageType: 'quotation_rejected',
+                isRead: false
+            });
+        } else {
+            messageContent = "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.";
+            messageType = 'text';
+            notificationType = 'quote_negotiation';
+            notificationContent = notificationMessages.buyer.quotationNegotiation || 'Seller wants to negotiate your quotation';
+        }
+
+        const newMessage = await Message.create({
+            senderId: seller,
+            senderModel: 'Seller',
+            content: messageContent,
+            chat: existingChat._id,
+            quotationId: quotation._id,
+            messageType: messageType,
+            isRead: false
+        });
+
+        // Always create a quotation_created system message if it's the first message in the chat
+        const messageCount = await Message.countDocuments({ chat: existingChat._id });
+        if (messageCount <= 1) {
+            await Message.create({
+                senderId: seller,
+                senderModel: 'Seller',
+                content: 'New Quotation Created',
+                chat: existingChat._id,
+                quotationId: quotation._id,
+                messageType: 'quotation_created',
+                isRead: false
+            });
+        }
+
+        // Update the chat's last message
+        existingChat.lastMessage = newMessage._id;
+        existingChat.unreadBy = 'buyer';
+        await existingChat.save();
+
+        // Send notification to buyer
+        const notificationData = {
+            recipient: buyer,
+            sender: {
+                model: 'Seller',
+                id: seller,
+                name: quotation.seller.companyName,
                 image: quotation.seller.profileImage || null
-            } ,
-            type:type ,
-            message:content
-            
+            },
+            type: notificationType,
+            message: notificationContent
+        };
 
-
-        }
-
-        console.log("----" ,data)
-           
-        await sendNotification(
-            data
-            
-        ) ;
+        await sendNotification(notificationData);
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK , 'Quotation status updated successfully' )
-        )
-    }catch(err){
-        handleError(res , err)
+            buildResponse(httpStatus.OK, 'Quotation status updated successfully')
+        );
+    } catch (err) {
+        handleError(res, err);
     }
-}
+};
