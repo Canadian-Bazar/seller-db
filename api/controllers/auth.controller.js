@@ -15,6 +15,8 @@ import generateForgotToken from '../utils/generate-forgot-token.js'
 import generateTokens from '../utils/generateTokens.js'
 import handleError from '../utils/handleError.js'
 import isIDGood from '../utils/isIDGood.js'
+import { getSignupBody } from '../helpers/getSignupBody.js'
+import { sendTextMessage } from '../helpers/sendTextMessage.js'
 
 /**
  * Controller: signupController
@@ -93,6 +95,7 @@ export const loginController = async (req, res) => {
     seller.loginAttempts = 0
     await seller.save()
     seller = await Seller.findById(seller._id).lean()
+    seller.role = 'seller'
     const { accessToken, refreshToken } = generateTokens(seller)
     res
       .cookie('accessToken', accessToken, {
@@ -356,3 +359,178 @@ export const resetPasswordController = async(req, res) => {
     handleError(res, err)
   }
 }
+
+
+
+
+export const sendVerificationEmailOtp = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req)
+    const {email , phoneNumber} = validatedData
+
+    const [checkIfSellerExists , checkIfVerificationExists] = await  Promise.all ([Seller.findOne({
+      $or:[
+        {email:email} ,
+        {phoneNumber:phoneNumber}
+      ]
+    }).lean() ,
+
+    Verifications.findOne({phoneNumber})
+
+
+  ])
+
+    if(checkIfSellerExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller is already registered.')
+    }
+
+    if(checkIfVerificationExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Please verify your mobile number first.')
+    }
+
+    const generatedOtp = await otpGenerator.generate(4   ,{
+      upperCaseAlphabets:false ,
+      lowerCaseAlphabets:false, 
+      digits:true
+    })
+
+
+    await sendMail(email , 'send-email-otp.ejs' , {
+      otp:generatedOtp ,
+      subject:'Verification Email '
+    })
+
+    res.status(httpStatus.OK).json(buildResponse(
+      httpStatus.OK ,
+      'OTP sent to email'
+    ))
+
+
+
+
+
+
+
+  }catch(err){
+    handleError(res , err)
+  }
+}
+
+
+export const verifyEmailOtp = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req)
+    const {email , otp , companyName} = validatedData
+
+    const [checkIfSellerExists , checkIfVerificationExists] = await  Promise.all ([Seller.findOne(
+        {email:email} ,
+      
+    ).lean() ,
+
+    Verifications.findOne({phoemaileNumber})
+
+
+  ])
+
+    if(checkIfSellerExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller is already registered.')
+    }
+
+    if(checkIfVerificationExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Please verify your mobile number first.')
+    }
+
+    if(checkIfVerificationExists.emailOtp!==parseInt(otp)){
+      throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid Otp')
+    }
+
+    await Verifications.findOneAndDelete(email)
+
+
+    await Seller.create()
+
+
+
+  }catch(err){
+    handleError(res , err)
+  }
+}
+
+export const sendPhoneNumberOtp = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req)
+    const {phoneNumber} = validatedData
+
+    const checkIfSellerExists = await Seller.findOne({phoneNumber})
+    if(checkIfSellerExists){
+      throw buildErrorObject(httpStatus.CONFLICT , 'Seller already registered.')
+    }
+
+
+
+    const generatedOtp = otpGenerator.generate(4, {
+      upperCaseAlphabets: false,
+      lowerCaseAlphabets: false,
+      specialChars: false,
+      digits: true,
+    })
+
+    const  body = getSignupBody(generatedOtp)
+
+
+
+
+
+    await  sendTextMessage(phoneNumber , body , generatedOtp)
+
+
+    await Verifications.findByIdAndUpdate({
+      phoneNumber:phoneNumber ,
+      phoneNumberOtp:generatedOtp
+    } ,{upsert:true})
+
+
+
+    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , "OTP sent successfully"))
+  }catch(err){
+    handleError(res , err)
+  }
+}
+
+
+export const verifyPhoneNumberOtp = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req)
+    const{phoneNumber , otp} = validatedData
+
+    const [sellerExists , verification] = await Promise.all([
+      Seller.findOne({phoneNumber}) , Verifications.findOne({phoneNumber})
+    ])
+
+    if(sellerExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller already exists')
+    }
+
+    if(!verification){
+      throw buildErrorObject(httpStatus.BAD_REQUEST ,'No OTP found. Try resending it')
+    }
+
+    if(verification.phoneNumberOtp !== parseInt(otp)){
+      throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid OTP')
+    }
+
+
+    verification.phoneNumberOtpVerified=true
+    await verification.save()
+
+
+    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , 'Phone number verified successfully.'))
+
+
+
+
+  }catch(err){
+    handleError(res , err)
+  }
+}
+

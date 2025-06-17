@@ -78,7 +78,37 @@ isCustomizable:{
   type:Boolean ,
   default:false,
   required:true
-}
+} ,
+
+
+    isComplete: { 
+        type: Boolean, 
+        default: false,
+        index: true
+    },
+    
+    completionPercentage: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 100
+    },
+    
+    incompleteSteps: [{
+        type: String,
+        enum: ['productInfo', 'attributes', 'images', 'pricing', 'variations', 'services', 'description']
+    }],
+    
+    stepStatus: {
+        productInfo: { type: Boolean, default: false },   
+        attributes: { type: Boolean, default: false },     
+        images: { type: Boolean, default: false },         
+        pricing: { type: Boolean, default: false },         
+        variations: { type: Boolean, default: false },    
+        services: { type: Boolean, default: false },        
+        description: { type: Boolean, default: false }      
+    },
+
 
 
   

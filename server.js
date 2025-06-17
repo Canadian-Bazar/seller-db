@@ -53,7 +53,7 @@ init().then((dbStatus) => {
       allowedHeaders: 'Content-Type',
       credentials: true,
       methods: 'POST, GET, PATCH, PUT, DELETE, HEAD, OPTIONS',
-      origin: 'http://localhost:3000',
+      origin: 'http://localhost:3001',
     }),
   )
 
