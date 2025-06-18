@@ -3,82 +3,80 @@ import aggregatePaginate from "mongoose-aggregate-paginate-v2";
 import paginate from 'mongoose-paginate-v2'
 
 const ProductSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    index: true
-  },
-  slug: {
-    type: String,
-    unique: true,
-    index: true
-  },
-  avgRating: {
-    type: Number, 
-    default: 0.0,
-    min: 0,
-    max: 5
-  },
-  ratingsCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  isVerified: {
-    type: Boolean,
-    default: false,
-    required: true
-  },
-  seller: {
-    type: mongoose.Types.ObjectId,
-    ref: 'Seller',
-    required: true,
-    index: true
-  },
-  images: [String],
-  
-  about: [String],
-  
-  services: [String], 
-  
-  descriptionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProductDescription'
-  },
-  minPrice:{
-    type:Number ,
-    required:true ,
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true
+    },
+    slug: {
+      type: String,
+      unique: true,
+      index: true
+    },
+    avgRating: {
+      type: Number, 
+      default: 0.0,
+      min: 0,
+      max: 5
+    },
+    ratingsCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+      required: true
+    },
+    seller: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Seller',
+      required: true,
+      index: true
+    },
+    images: [String],
+    
+    about: [String],
+    
+    services: [String], 
+    
+    descriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ProductDescription'
+    },
+    minPrice:{
+      type:Number ,
+    } ,
+    maxPrice:{
+      type:Number ,
+    } ,
+    moq:{
+      type:Number ,
+      required:true ,
+      default:1
+    } ,
+    categoryId:{
+      type:mongoose.Types.ObjectId ,
+      ref:'Category',
+      required:true
+    } ,
+    isVerified:{
+      type:Boolean ,
+      default:false ,
+      required:true
   } ,
-  maxPrice:{
+  deliveryDays:{
     type:Number ,
-    required:true
-  } ,
-  moq:{
-    type:Number ,
-    required:true ,
+    required:true,
     default:1
   } ,
-  categoryId:{
-    type:mongoose.Types.ObjectId ,
-    ref:'Category',
+  isCustomizable:{
+    type:Boolean ,
+    default:false,
     required:true
   } ,
-  isVerified:{
-    type:Boolean ,
-    default:false ,
-    required:true
-} ,
-deliveryDays:{
-  type:Number ,
-  required:true,
-  default:1
-} ,
-isCustomizable:{
-  type:Boolean ,
-  default:false,
-  required:true
-} ,
 
 
     isComplete: { 

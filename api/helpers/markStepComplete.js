@@ -1,15 +1,13 @@
 import Products from '../models/products.schema.js'
 
 
-export const markStepCompleteAsync = (productId, completedStep) => {
-    markStepComplete(productId, completedStep)
-        .catch(error => {
-            console.error(`Failed to mark step ${completedStep} complete for product ${productId}:`, error);
-        });
-};
 
-const markStepComplete = async (productId, completedStep) => {
+
+export const markStepCompleteAsync = async (productId, completedStep) => {
     try {
+
+
+        console.log(completedStep)
         const product = await Products.findById(productId)
             .select('stepStatus incompleteSteps completionPercentage isComplete')
             .lean();
@@ -43,7 +41,8 @@ const markStepComplete = async (productId, completedStep) => {
             updateData.completedAt = new Date();
         }
 
-        await Products.findByIdAndUpdate(productId, updateData);
+        const data  = await Products.findByIdAndUpdate(productId, updateData);
+        console.log(data)
 
     } catch (error) {
         console.error('Error marking step complete:', error);

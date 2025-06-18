@@ -6,6 +6,10 @@ import quotationRoutes from './quotation.routes.js'
 import productAttributesRoutes from './product-attributes.routes.js'
 import productPricingRoutes from './product-pricing.routes.js'
 import productDescriptionRoutes from './product-description.routes.js'
+import productVariationsRoutes from './product-variations.routes.js'
+import productImagesRoutes from './product-images.routes.js'
+import productServicesRoutes from './product-services.routes.js'
+import productInfoRoutes from './product-info.routes.js'
 
 const v1Routes = express.Router()
 const router = express.Router()
@@ -15,6 +19,11 @@ v1Routes.use('/upload', uploadRoutes)
 v1Routes.use('/quotation', quotationRoutes)
 v1Routes.use('/product-attributes' , productAttributesRoutes)
 v1Routes.use('/product-pricing' , productPricingRoutes)
+v1Routes.use('/product-description' , productDescriptionRoutes)
+v1Routes.use('/product-variations' , productVariationsRoutes)
+v1Routes.use('/product-images' , productImagesRoutes)
+v1Routes.use('/product-services' , productServicesRoutes)
+v1Routes.use('/product-info' , productInfoRoutes)
 
 router.use('/api/v1', v1Routes)
 

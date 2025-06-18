@@ -6,6 +6,7 @@ import {matchedData} from 'express-validator'
 import  httpStatus  from 'http-status';
 import mongoose from 'mongoose'
 import { markStepCompleteAsync } from '../helpers/markStepComplete.js'
+import { uploadFile } from '../helpers/aws-s3.js'
 
 
 export const syncProductDescriptionController = async (req, res) => {
