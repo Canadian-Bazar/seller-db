@@ -4,6 +4,8 @@ import Products from '../models/products.schema.js'
 import handleError from '../utils/handleError.js';
 import buildErrorObject from '../utils/buildErrorObject.js';
 import buildResponse from '../utils/buildResponse.js';
+import { matchedData } from 'express-validator';
+import httpStatus from 'http-status';
 
 
 
@@ -64,7 +66,7 @@ export const getProductVariationsController = async (req, res) => {
         const variations = await ProductVariation.findOne({ productId: productId });
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 'Variations retrieved successfully', variations)
+            buildResponse(httpStatus.OK,  variations)
         );
 
     } catch (err) {

@@ -13,10 +13,16 @@ router.use(requireAuth)
 
 
 router.post(
-    '/' ,
+    '/:productId' ,
     productAttributesValidators.validateSyncProductAttributes ,
     productAttributesControllers.syncProductAttributesController
     
+)
+
+router.get(
+    '/:productId' ,
+    productAttributesValidators.validateGetProductAttributes ,
+    productAttributesControllers.getProductAttributesController
 )
 
 

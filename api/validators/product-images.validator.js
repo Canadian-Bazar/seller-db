@@ -14,12 +14,16 @@ export const validateSyncImages = [
     check('images')
         .optional()
         .isArray()
-        .withMessage('Images should be an array'),
+        .withMessage('Images should be an array')
+        .customSanitizer((value) => {
+            return Array.isArray(value) ? value.filter(img => img && img.trim() !== '') : value;
+        }),
 
     check('images.*')
         .optional()
         .isString()
-        .withMessage('Each image must be a string'),
+        .notEmpty()
+        .withMessage('Each image must be a non-empty string') ,
 
     (req, res, next) => validateRequest(req, res, next)
 ];

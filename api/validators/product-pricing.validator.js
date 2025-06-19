@@ -1,6 +1,5 @@
-import { param , check } from "express-validator";
+import { param, check } from "express-validator";
 import validateRequest from "../utils/validateRequest.js";
-
 
 export const validateSyncProductPricing = [
     param('productId')
@@ -8,17 +7,17 @@ export const validateSyncProductPricing = [
         .isMongoId()
         .withMessage('Product ID should be a mongoose ID'),
 
-    check('basePrice')
+        check('basePrice')
         .exists({ checkFalsy: true })
         .withMessage('Base price is required')
-        .isNumeric({min:1})
-        .withMessage('Base price must be a number') ,
-        
+        .isFloat({ min: 1 })
+        .withMessage('Base price must be a number greater than 0') ,
+
 
     check('quantityPriceTiers')
-        .optional()
-        .isArray()
-        .withMessage('Quantity price tiers must be an array'),
+        .exists({ checkFalsy: true })
+        .isArray({ min: 1 })
+        .withMessage('Quantity price tiers must be a non-empty array if provided'),
 
     check('quantityPriceTiers.*.min')
         .if(check('quantityPriceTiers').isArray({ min: 1 }))
@@ -31,7 +30,20 @@ export const validateSyncProductPricing = [
         .if(check('quantityPriceTiers').isArray({ min: 1 }))
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Tier maximum must be at least 1'),
+        .withMessage('Tier maximum must be at least 1')
+        .custom((value, { req, path }) => {
+            const tiers = req.body.quantityPriceTiers;
+            if (!Array.isArray(tiers)) return true;
+            
+            const index = parseInt(path.match(/\[(\d+)\]/)[1]);
+            const isLastElement = index === tiers.length - 1;
+            
+            if (!isLastElement && (value === undefined || value === null || value === '')) {
+                throw new Error('Max quantity is required for all tiers except the last one');
+            }
+            
+            return true;
+        }),
 
     check('quantityPriceTiers.*.price')
         .if(check('quantityPriceTiers').isArray({ min: 1 }))
@@ -46,14 +58,38 @@ export const validateSyncProductPricing = [
             return true;
         }),
 
+    check('quantityPriceTiers')
+        .if(check('quantityPriceTiers').isArray({ min: 1 }))
+        .custom((tiers) => {
+            for (let i = 0; i < tiers.length; i++) {
+                const tier = tiers[i];
+                
+                if (tier.max && tier.min > tier.max) {
+                    throw new Error(`Tier ${i + 1}: minimum quantity cannot be greater than maximum quantity`);
+                }
+                
+                if (i < tiers.length - 1) {
+                    const nextTier = tiers[i + 1];
+                    if (tier.max && tier.max >= nextTier.min) {
+                        throw new Error(`Tier ${i + 1} and ${i + 2}: overlapping quantity ranges`);
+                    }
+                }
+            }
+            return true;
+        }),
+
     check('leadTime')
-        .optional()
-        .isArray()
-        .withMessage('Lead time must be an array'),
+        .exists()
+        .withMessage('Lead time is required')
+        .notEmpty()
+        .withMessage('Lead time cannot be empty')
+        .isArray({ min: 1 })
+        .withMessage('Lead time must be a non-empty array'),
 
     check('leadTime.*.min')
         .if(check('leadTime').isArray({ min: 1 }))
-        .optional()
+        .exists({ checkFalsy: true })
+        .withMessage('Lead time minimum is required')
         .isInt({ min: 1 })
         .withMessage('Lead time minimum must be at least 1'),
 
@@ -61,15 +97,60 @@ export const validateSyncProductPricing = [
         .if(check('leadTime').isArray({ min: 1 }))
         .optional()
         .isInt({ min: 1 })
-        .withMessage('Lead time maximum must be at least 1'),
+        .withMessage('Lead time maximum must be at least 1')
+        .custom((value, { req, path }) => {
+            const leadTimes = req.body.leadTime;
+            if (!Array.isArray(leadTimes)) return true;
+            
+            const index = parseInt(path.match(/\[(\d+)\]/)[1]);
+            const isLastElement = index === leadTimes.length - 1;
+            
+            if (!isLastElement && (value === undefined || value === null || value === '')) {
+                throw new Error('Max lead time is required for all ranges except the last one');
+            }
+            
+            return true;
+        }),
 
     check('leadTime.*.days')
         .if(check('leadTime').isArray({ min: 1 }))
-        .optional()
+        .exists({ checkFalsy: true })
+        .withMessage('Lead time days is required')
         .isInt({ min: 1 })
-        .withMessage('Lead time days must be at least 1') ,
+        .withMessage('Lead time days must be at least 1'),
+
+    check('leadTime')
+        .if(check('leadTime').isArray({ min: 1 }))
+        .custom((leadTimes) => {
+            for (let i = 0; i < leadTimes.length; i++) {
+                const leadTime = leadTimes[i];
+                
+                if (leadTime.max && leadTime.min > leadTime.max) {
+                    throw new Error(`Lead time ${i + 1}: minimum cannot be greater than maximum`);
+                }
+                
+                if (i < leadTimes.length - 1) {
+                    const nextLeadTime = leadTimes[i + 1];
+                    if (leadTime.max && leadTime.max >= nextLeadTime.min) {
+                        throw new Error(`Lead time ${i + 1} and ${i + 2}: overlapping ranges`);
+                    }
+                }
+            }
+            return true;
+        }),
+
+    (req, res, next) => validateRequest(req, res, next)
+];
 
 
+export const validateGetProductPricing = [
+    param('productId')
+        .exists()
+        .withMessage('Product ID is required')
+        .notEmpty()
+        .withMessage('Product ID is required')
+        .isMongoId()
+        .withMessage('Invalid Mongo ID'),
 
-        (req , res , next)=>validateRequest(req , res, next)
+    (req, res, next) => validateRequest(req, res, next)
 ];

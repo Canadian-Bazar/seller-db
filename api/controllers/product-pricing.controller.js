@@ -6,6 +6,7 @@ import {matchedData} from 'express-validator'
 import  httpStatus  from 'http-status';
 import mongoose from 'mongoose'
 import { markStepCompleteAsync } from '../helpers/markStepComplete.js'
+import ProductPricing from '../models/product-pricing.schema.js'
 
 export const syncProductPricingController = async (req, res) => {
     try {
@@ -63,7 +64,7 @@ export const getProductPricingController = async (req, res) => {
         const pricing = await ProductPricing.findOne({ productId: productId });
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 'Pricing retrieved successfully', pricing)
+            buildResponse(httpStatus.OK,  pricing)
         );
 
     } catch (err) {

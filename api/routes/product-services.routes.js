@@ -15,14 +15,14 @@ router.use(requireAuth)
 
 
 router.get(
-    '/' ,
+    '/:productId' ,
     productServicesValidators.validateGetProductServices ,
     productServicesControllers.getProductServicesController
 )
 
 
 router.post(
-    '/' ,
+    '/:productId' ,
     productServicesValidators.validateCreateProductServices ,
     productServicesControllers.updateProductServicesController
 )

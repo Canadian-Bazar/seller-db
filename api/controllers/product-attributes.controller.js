@@ -23,6 +23,8 @@ export const syncProductAttributesController = async (req, res) => {
         }
 
         const deletePromise = ProductAttributes.deleteMany({ productId: productId });
+
+        console.log('atributes' , attributes)
         
         const payload = attributes?.length > 0 ? attributes.map(item => ({
             ...item,
@@ -32,9 +34,12 @@ export const syncProductAttributesController = async (req, res) => {
         await deletePromise;
 
         if (payload.length > 0) {
+
+            console.log('Inserting attributes:', payload);
             await ProductAttributes.insertMany(payload, {
                 ordered: false, 
-                lean: true      
+
+
             });
         }
 
@@ -48,5 +53,33 @@ export const syncProductAttributesController = async (req, res) => {
         handleError(res, err);
     }
 };
+
+
+
+export const getProductAttributesController = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const userId = req.user._id;
+        const { productId } = validatedData;
+
+        console.log(productId , userId)
+
+        const productExists = await Products.exists({ _id: productId, seller: userId });
+        if (!productExists) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such product found');
+        }
+
+        const attributes = await ProductAttributes.find({ productId }).select("-_id -productId").lean();
+
+        console.log(attributes)
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, attributes)
+        );
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
 
 

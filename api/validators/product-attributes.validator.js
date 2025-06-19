@@ -9,16 +9,24 @@ export const validateSyncProductAttributes = [
         .withMessage('Product ID should be a mongoose ID'),
 
     check('attributes')
-        .isArray()
-        .withMessage('Attributes must be an array')
-        .isLength({ min: 1 })
-        .withMessage('Attributes array cannot be empty')
+        .exists({ checkFalsy: true })
+        .withMessage('Attributes field is required')
+        .notEmpty()
+        .withMessage('Attributes field cannot be empty')
+        .bail()
+        .isArray({min:1})
+        .withMessage('Attributes must be a non empty array')
         .bail(),
 
-    check('attributes.*._id')
+    check('attributes.*.attributes.*._id')
         .optional()
+        .notEmpty()
+        .withMessage('Attribute ID cannot be empty')
+        .bail()
         .isMongoId()
-        .withMessage('Invalid Attribute ID'),
+        .withMessage('Invalid Attribute ID')
+        .bail(),
+
 
     check('attributes.*.name')
         .exists({ checkFalsy: true })
@@ -31,10 +39,8 @@ export const validateSyncProductAttributes = [
         .bail(),
 
     check('attributes.*.attributes')
-        .isArray()
-        .withMessage('Attributes field must be an array')
-        .isLength({ min: 1 })
-        .withMessage('Attributes array cannot be empty')
+        .isArray({min: 1})
+        .withMessage('Attributes field must be a non empty array')
         .bail(),
 
     check('attributes.*.attributes.*.field')
@@ -66,7 +72,8 @@ export const validateSyncProductAttributes = [
                 throw new Error('Duplicate attribute names are not allowed');
             }
             return true;
-        }),
+        })
+        .bail(),
 
     check('attributes.*.attributes')
         .custom((attributesArray, { path }) => {
@@ -77,10 +84,17 @@ export const validateSyncProductAttributes = [
                 throw new Error(`Duplicate field names found in attribute at ${path}`);
             }
             return true;
-        })
+        }) ,
+
+        (req , res , next)=>validateRequest(req , res , next)
 ];
 
 
 export const validateGetProductAttributes =[
+
+        param('productId')
+        .exists({ checkFalsy: true })
+        .isMongoId()
+        .withMessage('Product ID should be a mongoose ID'),
     (req , res, next)=>validateRequest(req , res , next)
 ]

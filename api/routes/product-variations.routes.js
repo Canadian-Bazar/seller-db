@@ -18,7 +18,7 @@ router.post(
 
 
 router.get(
-    '/' ,
+    '/:productId' ,
     productVariationsValidator.validateGetProductVariations,
     productVariationsController.getProductVariationsController
 )

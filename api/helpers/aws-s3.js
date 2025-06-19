@@ -41,6 +41,8 @@ export const uploadFile = async (files) => {
 
     console.log('bro1')
 
+    console.log('Files to upload:', files);
+
     const uploadPromises = files.map(async (file) => {
       const fileStream = fs.createReadStream(file.path);
       const uploadParams = {

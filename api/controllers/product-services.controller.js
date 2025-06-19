@@ -5,6 +5,7 @@ import Products from '../models/products.schema.js'
 import  httpStatus  from 'http-status';
 import handleError from "../utils/handleError.js";
 import { matchedData } from "express-validator";
+import { markStepCompleteAsync } from "../helpers/markStepComplete.js";
 
 
 
@@ -28,9 +29,9 @@ export const updateProductServicesController = async (req, res) => {
         }
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 'Services updated successfully', {
-                services: updatedProduct.services
-            })
+            buildResponse(httpStatus.OK, 'Services updated successfully', 
+              updatedProduct.services
+            )
         );
 
         markStepCompleteAsync(productId, 'services');
@@ -58,7 +59,7 @@ export const getProductServicesController = async (req, res) => {
         }
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 'Services retrieved successfully', 
+            buildResponse(httpStatus.OK, 
                 product.services
             )
         );

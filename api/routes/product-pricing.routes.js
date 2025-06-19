@@ -14,10 +14,17 @@ router.use(requireAuth)
 
 
 router.post(
-    '/' ,
+    '/:productId' ,
     productPricingValidators.validateSyncProductPricing ,
     productPricingControllers.syncProductPricingController
     
+)
+
+
+router.get(
+    '/:productId' ,
+    productPricingValidators.validateGetProductPricing ,
+    productPricingControllers.getProductPricingController
 )
 
 

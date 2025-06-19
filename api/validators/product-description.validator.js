@@ -55,3 +55,12 @@ export const validateSyncProductDescription = [
 
 
 ]
+
+
+export const validateGetProductDescription = [
+    param('productId')
+        .exists({ checkFalsy: true })
+        .isMongoId()
+        .withMessage('Product ID should be a mongoose ID'), 
+    (req, res, next) => validateRequest(req, res, next) 
+]

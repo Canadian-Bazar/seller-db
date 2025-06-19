@@ -65,8 +65,8 @@ export const validateGetProductVariations =[
     .withMessage('Product ID is required')
     .notEmpty()
     .withMessage('Product ID cannot be empty')
-    .isInt({min:1})
-    .withMessage('Invalid Product Id') ,
+    .isMongoId()
+    .withMessage('Invalid Mongo ID'),
     
 
     (req , res, next) =>validateRequest(req , res, next)

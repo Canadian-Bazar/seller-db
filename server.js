@@ -71,7 +71,7 @@ init().then((dbStatus) => {
 
   api.use(helmet())
   api.use(morgan('dev'))
-  api.use(rateLimit)
+  // api.use(rateLimit)
 
   
   api.use('', v1Routes)

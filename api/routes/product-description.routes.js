@@ -12,9 +12,16 @@ router.use(requireAuth)
 
 
 router.post(
-    '/' ,
+    '/:productId' ,
     productDescriptionValidators.validateSyncProductDescription ,
     productDescriptionControllers.syncProductDescriptionController
+)
+
+
+router.get(
+    '/:productId',
+    productDescriptionValidators.validateGetProductDescription,
+    productDescriptionControllers.getProductDescriptionController
 )
 
 

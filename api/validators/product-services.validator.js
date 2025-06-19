@@ -9,8 +9,8 @@ export const validateCreateProductServices = [
         .withMessage('Product ID should be a mongoose ID'),
 
     check('services')
-        .isArray()
-        .withMessage('Services must be an array'),
+        .isArray({min:1})
+        .withMessage('Services must be a non empty array'),
 
     check('services.*')
         .if(check('services').isArray({ min: 1 }))
