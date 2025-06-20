@@ -17,11 +17,19 @@ import handleError from '../utils/handleError.js'
 import isIDGood from '../utils/isIDGood.js'
 import { getSignupBody } from '../helpers/getSignupBody.js'
 import { sendTextMessage } from '../helpers/sendTextMessage.js'
+import { v4 as uuidv4 } from 'uuid';
+import SellerVerification from '../models/seller-verification.schema.js'
 
 /**
  * Controller: signupController
  * Description: Handles seller registration by creating a new seller in the database.
- */
+ * Flow
+ * * 1. Validate incoming request data using matchedData.
+ * * 2. Check if a seller with the provided email already exists.
+ * * 3. If a seller exists, throw a conflict error.
+ * * 4.Send an email dfor 
+ * *5
+*/
 export const signupController = async (req, res) => {
   try {
     req = matchedData(req)
@@ -364,134 +372,155 @@ export const resetPasswordController = async(req, res) => {
 
 
 export const sendVerificationEmailOtp = async(req , res)=>{
-  try{
-    const validatedData = matchedData(req)
-    const {email , phoneNumber} = validatedData
+   try {
+        const validatedData = matchedData(req);
+        const { companyName, email } = validatedData;
 
-    const [checkIfSellerExists , checkIfVerificationExists] = await  Promise.all ([Seller.findOne({
-      $or:[
-        {email:email} ,
-        {phoneNumber:phoneNumber}
-      ]
-    }).lean() ,
+        const sellerExists = await Seller.findOne({ email }).lean();
+        if (sellerExists) {
+            throw buildErrorObject(httpStatus.CONFLICT, 'Seller already registered with this email');
+        }
 
-    Verifications.findOne({phoneNumber})
+        const sessionToken = uuidv4();
 
+        const emailOtp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
 
-  ])
+        const verification = await SellerVerification.findOneAndUpdate(
+            { email },
+            {
+                companyName,
+                email,
+                emailOtp: parseInt(emailOtp),
+                emailOtpExpiry: new Date(Date.now() + 10 * 60 * 1000),
+                emailOtpAttempts: 0,
+                sessionToken,
+                currentStep: 'email_verification'
+            },
+            { upsert: true, new: true }
+        );
 
-    if(checkIfSellerExists){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller is already registered.')
+        console.log(verification)
+
+        await sendMail(email, 'send-email-otp.ejs', {
+            otp: emailOtp,
+            companyName,
+            subject: 'Verify Your Email - Company Registration'
+        });
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK,  {
+                sessionToken,
+                step: 'email_verification',
+                email: email.replace(/(.{2}).*(@.*)/, '$1***$2') 
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
     }
-
-    if(checkIfVerificationExists){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Please verify your mobile number first.')
-    }
-
-    const generatedOtp = await otpGenerator.generate(4   ,{
-      upperCaseAlphabets:false ,
-      lowerCaseAlphabets:false, 
-      digits:true
-    })
-
-
-    await sendMail(email , 'send-email-otp.ejs' , {
-      otp:generatedOtp ,
-      subject:'Verification Email '
-    })
-
-    res.status(httpStatus.OK).json(buildResponse(
-      httpStatus.OK ,
-      'OTP sent to email'
-    ))
-
-
-
-
-
-
-
-  }catch(err){
-    handleError(res , err)
-  }
 }
 
 
 export const verifyEmailOtp = async(req , res)=>{
   try{
     const validatedData = matchedData(req)
-    const {email , otp , companyName} = validatedData
+   const {otp , sessionToken}=validatedData
+   const verification = await SellerVerification.findOne({sessionToken})
+   if(!verification){
+     throw buildErrorObject(httpStatus.NOT_FOUND , 'No session found. Please resend the OTP')
+   }
+   if(verification.emailOtpVerified){
+     throw buildErrorObject(httpStatus.BAD_REQUEST , 'Email already verified')
+   }
 
-    const [checkIfSellerExists , checkIfVerificationExists] = await  Promise.all ([Seller.findOne(
-        {email:email} ,
-      
-    ).lean() ,
+   if(verification.emailOtpExpiry < new Date()){
+     throw buildErrorObject(httpStatus.UNAUTHORIZED , 'OTP expired. Please resend the OTP')
+   }
+   if(verification.emailOtp !== parseInt(otp)){
+     throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid OTP')
+   }
+   verification.emailOtpVerified = true
 
-    Verifications.findOne({phoemaileNumber})
+    verification.currentStep = 'phone_verification'
 
+      verification.isEmailVerified = true;
+        verification.currentStep = 'phone_verification';
+        verification.emailOtpAttempts = 0; 
+        console.log(verification)
 
-  ])
+      await verification.save();   
 
-    if(checkIfSellerExists){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller is already registered.')
-    }
-
-    if(checkIfVerificationExists){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Please verify your mobile number first.')
-    }
-
-    if(checkIfVerificationExists.emailOtp!==parseInt(otp)){
-      throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid Otp')
-    }
-
-    await Verifications.findOneAndDelete(email)
-
-
-    await Seller.create()
-
-
-
+    // Respond with session token and next step
+        
+        
+        res.status(httpStatus.OK).json(
+      buildResponse(httpStatus.OK , {
+        step: 'phone_verification',
+        sessionToken: verification.sessionToken
+      })
+    )
   }catch(err){
     handleError(res , err)
   }
 }
 
+
 export const sendPhoneNumberOtp = async(req , res)=>{
   try{
-    const validatedData = matchedData(req)
-    const {phoneNumber} = validatedData
+       const validatedData = matchedData(req);
+        const { sessionToken, phoneNumber, password } = validatedData;
 
-    const checkIfSellerExists = await Seller.findOne({phoneNumber})
-    if(checkIfSellerExists){
-      throw buildErrorObject(httpStatus.CONFLICT , 'Seller already registered.')
-    }
+        const verification = await SellerVerification.findOne({ sessionToken });
 
+        console.log(verification)
+        if (!verification) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
+        }
 
+        if (verification.currentStep !== 'phone_verification') {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Please complete email verification first.');
+        }
 
-    const generatedOtp = otpGenerator.generate(4, {
-      upperCaseAlphabets: false,
-      lowerCaseAlphabets: false,
-      specialChars: false,
-      digits: true,
-    })
+        if (!verification.isEmailVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Please verify your email first.');
+        }
 
-    const  body = getSignupBody(generatedOtp)
+        const sellerExists = await Seller.findOne({ phoneNumber }).lean();
+        if (sellerExists) {
+            throw buildErrorObject(httpStatus.CONFLICT, 'Seller already registered with this phone number');
+        }
 
+        const phoneOtp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
 
+        const hashedPassword = await bcrypt.hash(password, 12);
 
+        verification.phoneNumber = phoneNumber;
+        verification.password = hashedPassword;
+        verification.phoneNumberOtp = parseInt(phoneOtp);
+        verification.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); 
+        verification.phoneOtpAttempts = 0;
+        await verification.save();
 
+        const body = getSignupBody(phoneOtp);
+        console.log('Phone OTP:', phoneOtp);
 
-    await  sendTextMessage(phoneNumber , body , generatedOtp)
-
-
-    await Verifications.findByIdAndUpdate({
-      phoneNumber:phoneNumber ,
-      phoneNumberOtp:generatedOtp
-    } ,{upsert:true})
-
-
-
-    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , "OTP sent successfully"))
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK , {
+                sessionToken,
+                step: 'phone_verification',
+                phoneNumber: phoneNumber.replace(/(\d{2})\d+(\d{2})/, '$1****$2')
+            })
+        );
   }catch(err){
     handleError(res , err)
   }
@@ -499,32 +528,51 @@ export const sendPhoneNumberOtp = async(req , res)=>{
 
 
 export const verifyPhoneNumberOtp = async(req , res)=>{
-  try{
-    const validatedData = matchedData(req)
-    const{phoneNumber , otp} = validatedData
+try {
+        const validatedData = matchedData(req);
+        const { sessionToken, otp } = validatedData;
 
-    const [sellerExists , verification] = await Promise.all([
-      Seller.findOne({phoneNumber}) , Verifications.findOne({phoneNumber})
-    ])
+        const verification = await SellerVerification.findOne({ sessionToken });
+        if (!verification) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
+        }
 
-    if(sellerExists){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Seller already exists')
-    }
+        if (verification.currentStep !== 'phone_verification') {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid step in signup flow.');
+        }
 
-    if(!verification){
-      throw buildErrorObject(httpStatus.BAD_REQUEST ,'No OTP found. Try resending it')
-    }
+        if (!verification.isEmailVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Email verification incomplete.');
+        }
 
-    if(verification.phoneNumberOtp !== parseInt(otp)){
-      throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid OTP')
-    }
+        if (verification.phoneOtpExpiry < new Date()) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'OTP expired. Please request a new one.');
+        }
 
+        if (verification.phoneOtpAttempts >= 5) {
+            throw buildErrorObject(httpStatus.TOO_MANY_REQUESTS, 'Too many invalid attempts. Please start signup again.');
+        }
 
-    verification.phoneNumberOtpVerified=true
-    await verification.save()
+        if (parseInt(verification.phoneNumberOtp) !== parseInt(otp)) {
+            verification.phoneOtpAttempts += 1;
+            await verification.save();
+            throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Invalid OTP');
+        }
+        
 
+        const newSeller = new Seller({
+            companyName: verification.companyName,
+            email: verification.email,
+            phoneNumber: verification.phoneNumber,
+            password: verification.password,
+          
+        });
 
-    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , 'Phone number verified successfully.'))
+        await newSeller.save();
+
+        verification.isEmailVerified = true;
+        verification.currentStep = 'completed';
+        await verification.save();
 
 
 
@@ -533,4 +581,75 @@ export const verifyPhoneNumberOtp = async(req , res)=>{
     handleError(res , err)
   }
 }
+
+export const resendEmailOtp = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { sessionToken } = validatedData;
+
+        const verification = await SellerVerification.findOne({ sessionToken });
+        if (!verification) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
+        }
+
+        const emailOtp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
+
+        verification.emailOtp = parseInt(emailOtp);
+        verification.emailOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        verification.emailOtpAttempts = 0;
+        await verification.save();
+
+        await sendMail(verification.email, 'send-email-otp.ejs', {
+            otp: emailOtp,
+            companyName: verification.companyName,
+            subject: 'Resend: Verify Your Email'
+        });
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, 'Email OTP resent successfully')
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+export const resendPhoneOtp = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { sessionToken } = validatedData;
+
+        const verification = await SellerVerification.findOne({ sessionToken });
+        if (!verification || verification.currentStep !== 'phone_verification') {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session or step.');
+        }
+
+        const phoneOtp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
+
+        verification.phoneNumberOtp = parseInt(phoneOtp);
+        verification.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        verification.phoneOtpAttempts = 0;
+        await verification.save();
+
+        const body = getSignupBody(phoneOtp);
+        console.log('Resend Phone OTP:', phoneOtp);
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, 'Phone OTP resent successfully')
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
 

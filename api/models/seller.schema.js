@@ -26,7 +26,7 @@ const SellerSchema = new mongoose.Schema({
      businessType: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'BusinessType',
-          required: true,
+          required: false,
      },
 
      categories: [
@@ -37,7 +37,7 @@ const SellerSchema = new mongoose.Schema({
      ],
      businessNumber: {
           type: String,
-          required: true,
+          required: false,
           trim: true,
      },
     
@@ -61,6 +61,11 @@ const SellerSchema = new mongoose.Schema({
           default: false,
           required: true
      } ,
+     isProfileCompelete:{
+          type:Boolean ,
+          default:false , 
+          required:true
+     }
     
 
 }, {

@@ -65,6 +65,51 @@ router.get(
   authControllers.verifyTokensController
 )
 
+router.post(
+  '/send-email-verification' ,
+  trimRequest.all,
+  authValidators.sendEmailVerificationValidator,
+  authControllers.sendVerificationEmailOtp
+)
+
+router.post(
+  '/verify-email-otp',
+  trimRequest.all,
+  authValidators.verifyEmailOtpValidator,
+  authControllers.verifyEmailOtp
+)
+
+
+router.post(
+  '/send-phone-verification' ,
+  trimRequest.all,
+  authValidators.sendPhoneNumberOtpValidator,
+  authControllers.sendPhoneNumberOtp
+
+)
+
+router.post(
+  '/verify-phone-otp',
+  trimRequest.all,
+  authValidators.verifyPhoneNumberOtpValidator,
+  authControllers.verifyPhoneNumberOtp
+)
+
+router.post(
+  '/resend-otp/email',
+  trimRequest.all,
+  authValidators.resendOtpvalidator,
+  authControllers.resendEmailOtp
+)
+
+
+router.post(
+  '/resend-otp/phone',
+  trimRequest.all,
+  authValidators.resendOtpvalidator,
+  authControllers.resendPhoneOtp
+)
+
 
 
 

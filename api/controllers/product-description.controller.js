@@ -16,31 +16,16 @@ export const syncProductDescriptionController = async (req, res) => {
         const userId = req.user._id;
         const { productId } = req.params;
         const { points, attributes } = validatedData;
-        const clientImages = validatedData.images || [];
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such product found');
         }
 
-        const existingDescription = await ProductDescription.findOne({ productId: productId });
-        const existingImages = existingDescription?.images || [];
-
- 
-        const validExistingImages = existingImages.filter(img => clientImages.includes(img));
-
-        let finalImages = [...validExistingImages];
-
-        if (req?.files && req.files.length > 0) {
-            const newImageUrls = await uploadFile(req.files);
-            finalImages = [...finalImages, ...newImageUrls];
-        }
-
         const updateData = {
             productId: productId,
             points: points || [],
-            attributes: attributes || [],
-            images: finalImages
+            attributes: attributes || []
         };
 
         const updatedDescription = await ProductDescription.findOneAndUpdate(
@@ -54,7 +39,7 @@ export const syncProductDescriptionController = async (req, res) => {
         );
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 'Description synchronized successfully', {
+            buildResponse(httpStatus.OK, 'Description data synchronized successfully', {
                 description: updatedDescription
             })
         );
@@ -62,6 +47,57 @@ export const syncProductDescriptionController = async (req, res) => {
         markStepCompleteAsync(productId, 'description');
 
     } catch (err) {
+        handleError(res, err);
+    }
+};
+
+
+export const syncProductDescriptionImagesController = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const userId = req.user._id;
+        const { productId } = validatedData;
+
+        console.log('Request Files:', validatedData.images);
+
+        const clientImages = validatedData.images 
+
+        const productExists = await Products.exists({ _id: productId, seller: userId });
+        if (!productExists) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such product found');
+        }
+
+        const existingDescription = await ProductDescription.findOne({ productId: productId });
+        const existingImages = existingDescription?.images || [];
+      
+        const validExistingImages = existingImages.filter(img => clientImages.includes(img));
+
+        let finalImages = [...validExistingImages];
+
+        if (req?.files && req.files.length > 0) {
+            const newImageUrls = await uploadFile(req.files);
+            finalImages = [...finalImages, ...newImageUrls];
+        }
+
+        const updatedDescription = await ProductDescription.findOneAndUpdate(
+            { productId: productId },
+            { $set: { images: finalImages } },
+            {
+                upsert: true,
+                new: true,
+                runValidators: true
+            }
+        );
+
+        console.log('Updated Description:', updatedDescription);
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, 'Description images synchronized successfully')
+        );
+
+    } catch (err) {
+
+        
         handleError(res, err);
     }
 };
@@ -81,12 +117,12 @@ export const getProductDescriptionController = async (req, res) => {
         const productDescription = await ProductDescription.findOne({ productId: productId });
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, 
-              productDescription
+            buildResponse(httpStatus.OK,  
+                 productDescription
             )
         );
 
     } catch (err) {
         handleError(res, err);
     }
-}
+};

@@ -57,6 +57,31 @@ export const validateSyncProductDescription = [
 ]
 
 
+
+export const validateSyncProductDescriptionImages = [
+    param('productId')
+        .exists({ checkFalsy: true })
+        .isMongoId()
+        .withMessage('Product ID should be a mongoose ID'),
+
+    check('images')
+        .optional()
+        .isArray()
+        .withMessage('Images should be an array')
+        .customSanitizer((value) => {
+            return Array.isArray(value) ? value.filter(img => img && img.trim() !== '') : value;
+        }),
+
+    check('images.*')
+        .optional()
+        .isString()
+        .notEmpty()
+        .withMessage('Each image must be a non-empty string') ,
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+
 export const validateGetProductDescription = [
     param('productId')
         .exists({ checkFalsy: true })
