@@ -64,17 +64,23 @@ export const signupController = async (req, res) => {
 export const loginController = async (req, res) => {
   try {
     req = matchedData(req)
-    let seller = await Seller.findOne({ email: req.email }).select('password loginAttempts blockExpires approvalStatus')
+    let seller = await Seller.findOne({
+      $or: [
+      { email: req.email },
+      { phone: req.phoneNumber }
+      ]
+    }).select('password loginAttempts blockExpires approvalStatus')
+
+    console.log(seller)
 
     if (!seller?._id) {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
     }
 
-    // Check if seller is approved
     if (seller.approvalStatus !== 'approved') {
       throw buildErrorObject(
         httpStatus.UNAUTHORIZED, 
-        `Your seller account is ${seller.approvalStatus}. Please wait for admin approval.`
+        `Your seller account's approval is ${seller.approvalStatus}.`
       )
     }
 
@@ -102,7 +108,10 @@ export const loginController = async (req, res) => {
     }
     seller.loginAttempts = 0
     await seller.save()
-    seller = await Seller.findById(seller._id).lean()
+    seller = await Seller.findById(seller._id).lean().select('companyName companyLogo isVerified isProfileComplete  logo')
+    if (!seller) {
+      throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
+    }
     seller.role = 'seller'
     const { accessToken, refreshToken } = generateTokens(seller)
     res
@@ -537,6 +546,8 @@ try {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
         }
 
+        console.log(verification)
+
         if (verification.currentStep !== 'phone_verification') {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid step in signup flow.');
         }
@@ -563,7 +574,7 @@ try {
         const newSeller = new Seller({
             companyName: verification.companyName,
             email: verification.email,
-            phoneNumber: verification.phoneNumber,
+            phone: verification.phoneNumber,
             password: verification.password,
           
         });
@@ -573,6 +584,13 @@ try {
         verification.isEmailVerified = true;
         verification.currentStep = 'completed';
         await verification.save();
+
+
+        res.status(httpStatus.CREATED).json(
+            buildResponse(httpStatus.CREATED, 
+               'Seller registered successfully',
+            )
+        );
 
 
 

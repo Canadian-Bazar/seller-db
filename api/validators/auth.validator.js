@@ -1,8 +1,10 @@
-import { check } from 'express-validator'
+import { check , body } from 'express-validator'
 
 import validateRequest from '../utils/validateRequest.js'
+import buildErrorObject from '../utils/buildErrorObject.js'
+import httpStatus from 'http-status'
 
-export const signupValidator = [
+export const signupValidator = [ 
   check('fullName')
     .exists()
     .withMessage('Full Name Is Required')
@@ -41,13 +43,20 @@ export const signupValidator = [
 
 export const loginValidator = [
   check('email')
-    .exists()
-    .withMessage('Email Is Required')
+    .optional()
     .not()
     .isEmpty()
     .withMessage('Email cannot be empty')
     .isEmail()
     .withMessage('Invalid Email'),
+
+  check('phoneNumber')
+    .optional()
+    .not()
+    .isEmpty()
+    .withMessage('Phone Number cannot be empty')
+    .isMobilePhone()
+    .withMessage('Invalid Phone Number'),
 
   check('password')
     .exists()
@@ -55,6 +64,14 @@ export const loginValidator = [
     .not()
     .isEmpty()
     .withMessage('Password cannot be empty'),
+
+  body()
+    .custom((value, { req }) => {
+      if (!req.body.email && !req.body.phoneNumber) {
+        throw buildErrorObject(httpStatus.BAD_REQUEST, 'Either email or phone number is required for login');
+      }
+      return true;
+    }),
 
   (req, res, next) => validateRequest(req, res, next)
 ]

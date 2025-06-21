@@ -55,13 +55,32 @@ const SellerSchema = new mongoose.Schema({
      logo: {
           type: String
      },
+
+
+     street:{
+        type:String ,
+        required:false
+    } ,
+    city:{
+        type:String , 
+        required:false ,
+    } ,
+    state:{
+        type:String ,
+        required:false ,
+    } ,
+
+    zip:{
+        type:String ,
+        required:false ,
+    } ,
    
      isVerified: {
           type: Boolean,
           default: false,
           required: true
      } ,
-     isProfileCompelete:{
+     isProfileComplete:{
           type:Boolean ,
           default:false , 
           required:true
