@@ -5,10 +5,10 @@ import buildResponse from "../utils/buildResponse.js";
 import { matchedData } from 'express-validator';
 import httpStatus from 'http-status'
 import buildErrorObject from "../utils/buildErrorObject.js";
-import getDailySalesData from "../analytics/getDailySalesData.js";
-import getWeeklySalesData from "../analytics/getWeeklySalesData.js";
-import getMonthlySalesData from "../analytics/getMonthlySalesData.js";
-import getYearlySalesData from "../analytics/getYearlySalesData.js";
+import getDailySalesData from "../sales-analytics/getDailySalesData.js";
+import getWeeklySalesData from "../sales-analytics/getWeeklySalesData.js";
+import getMonthlySalesData from "../sales-analytics/getMonthlySalesData.js";
+import getYearlySalesData from "../sales-analytics/getYearlySalesData.js";
 import Product from "../models/products.schema.js";
 
 
@@ -45,21 +45,21 @@ export const getProductAnalytics = async (req, res) => {
       
       verifiedProductIds = sellerProducts.map(product => product._id.toString());
     } else {
-      const productOwnership = await Product.find({
-        _id: { $in: products },
-        sellerId
-      }, { _id: 1 });
+      // const productOwnership = await Product.find({
+      //   _id: { $in: products },
+      //   sellerId
+      // }, { _id: 1 });
       
-      if (productOwnership.length === 0) {
-        throw buildErrorObject(httpStatus.FORBIDDEN, 'Access denied. You can only access analytics for your own products.');
-      }
+      // if (productOwnership.length === 0) {
+      //   throw buildErrorObject(httpStatus.FORBIDDEN, 'Access denied. You can only access analytics for your own products.');
+      // }
       
-      const foundProductIds = productOwnership.map(p => p._id.toString());
-      const unauthorizedProducts = products.filter(id => !foundProductIds.includes(id));
+      // const foundProductIds = productOwnership.map(p => p._id.toString());
+      // const unauthorizedProducts = products.filter(id => !foundProductIds.includes(id));
       
-      if (unauthorizedProducts.length > 0) {
-        throw buildErrorObject(httpStatus.FORBIDDEN, `Access denied. You don't own these products: ${unauthorizedProducts.join(', ')}`);
-      }
+      // if (unauthorizedProducts.length > 0) {
+      //   throw buildErrorObject(httpStatus.FORBIDDEN, `Access denied. You don't own these products: ${unauthorizedProducts.join(', ')}`);
+      // }
       
       verifiedProductIds = foundProductIds;
     }
@@ -89,3 +89,9 @@ export const getProductAnalytics = async (req, res) => {
     handleError(res, err);
   }
 };
+
+
+
+
+
+
