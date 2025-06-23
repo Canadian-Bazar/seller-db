@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
+
 
 const ProductActivityLogSchema = new mongoose.Schema({
   productId: {
@@ -13,7 +14,7 @@ const ProductActivityLogSchema = new mongoose.Schema({
   },
   activityType: {
     type: String,
-    enum: ['view', 'sent', 'accepted', 'rejected', 'in-progress'],
+    enum: ['view', 'sent', 'accepted', 'rejected', 'in-progress', 'sold'],
     required: true,
     index: true
   },
@@ -21,6 +22,14 @@ const ProductActivityLogSchema = new mongoose.Schema({
     type: mongoose.Types.ObjectId,
     ref: 'Quotation',
     sparse: true
+  },
+  saleAmount: {
+    type: Number,
+    sparse: true 
+  },
+  profit: {
+    type: Number,
+    sparse: true 
   },
   isProcessed: {
     type: Boolean,
@@ -32,13 +41,56 @@ const ProductActivityLogSchema = new mongoose.Schema({
     default: Date.now,
     index: true
   }
-}, { 
-  timestamps: true, 
-  collection: 'ProductActivityLog' 
+}, {
+  timestamps: true,
+  collection: 'ProductActivityLog'
 });
 
-// Compound indices for batch processing
-ProductActivityLogSchema.index({ activityType: 1, isProcessed: 1, createdAt: 1 });
-ProductActivityLogSchema.index({ productId: 1, activityType: 1, createdAt: 1 });
+
+
+
+const DailyMetricsSchema = new mongoose.Schema({
+  day: { type: Number, required: true }, // 1-31
+  salesCount: { type: Number, default: 0 },
+  salesAmount: { type: Number, default: 0 },
+  profit: { type: Number, default: 0 },
+  viewCount: { type: Number, default: 0 },
+  quotationsSent: { type: Number, default: 0 },
+  quotationsAccepted: { type: Number, default: 0 },
+  quotationsRejected: { type: Number, default: 0 },
+  quotationsInProgress: { type: Number, default: 0 },
+  popularityScore: { type: Number, default: 0 },
+  bestsellerScore: { type: Number, default: 0 }
+}, { _id: false });
+
+// Weekly metrics subdocument
+const WeeklyMetricsSchema = new mongoose.Schema({
+  week: { type: Number, required: true }, // 1-53 (week of year)
+  salesCount: { type: Number, default: 0 },
+  salesAmount: { type: Number, default: 0 },
+  profit: { type: Number, default: 0 },
+  viewCount: { type: Number, default: 0 },
+  quotationsSent: { type: Number, default: 0 },
+  quotationsAccepted: { type: Number, default: 0 },
+  quotationsRejected: { type: Number, default: 0 },
+  quotationsInProgress: { type: Number, default: 0 },
+  popularityScore: { type: Number, default: 0 },
+  bestsellerScore: { type: Number, default: 0 }
+}, { _id: false });
+
+const MonthlyMetricsSchema = new mongoose.Schema({
+  month: { type: Number, required: true }, 
+  salesCount: { type: Number, default: 0 },
+  salesAmount: { type: Number, default: 0 },
+  profit: { type: Number, default: 0 },
+  viewCount: { type: Number, default: 0 },
+  quotationsSent: { type: Number, default: 0 },
+  quotationsAccepted: { type: Number, default: 0 },
+  quotationsRejected: { type: Number, default: 0 },
+  quotationsInProgress: { type: Number, default: 0 },
+  popularityScore: { type: Number, default: 0 },
+  bestsellerScore: { type: Number, default: 0 }
+}, { _id: false });
+
 
 export default mongoose.model('ProductActivityLog', ProductActivityLogSchema);

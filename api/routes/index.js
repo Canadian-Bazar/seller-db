@@ -11,6 +11,7 @@ import productImagesRoutes from './product-images.routes.js'
 import productServicesRoutes from './product-services.routes.js'
 import productInfoRoutes from './product-info.routes.js'
 import profileRoutes from './profile.routes.js'
+import productAnalyticsRoutes from './product-analytics.routes.js'
 
 const v1Routes = express.Router()
 const router = express.Router()
@@ -26,6 +27,7 @@ v1Routes.use('/product-images' , productImagesRoutes)
 v1Routes.use('/product-services' , productServicesRoutes)
 v1Routes.use('/product-info' , productInfoRoutes)
 v1Routes.use('/profile', profileRoutes)
+v1Routes.use('/product-analytics', productAnalyticsRoutes)
 
 router.use('/api/v1', v1Routes)
 

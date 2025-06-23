@@ -581,7 +581,7 @@ try {
 
         await newSeller.save();
 
-        verification.isEmailVerified = true;
+        verification.isPhoneNumberVerified = true;
         verification.currentStep = 'completed';
         await verification.save();
 
