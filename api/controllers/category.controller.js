@@ -14,17 +14,27 @@ export const getAllCategories = async (req, res) => {
 
     const page = Math.max(parseInt(validatedData.page) || 1, 1)
     const limit = Math.max(parseInt(validatedData.limit) || 10, 1)
-    const skip = (page - 1) * limit
 
-    const filter = { isActive: true, parentCategory: { $exists: false } }
+
+
+    const skip = (page - 1) * limit;
+
+    const filter = { isActive: true, parentCategory: { $exists: false } };
+
+    if (validatedData.search) {
+      filter.name = { $regex: validatedData.search, $options: 'i' };
+    }
+
+    
+
     const [totalDocs, categories] = await Promise.all([
       Category.countDocuments(filter),
       Category.find(filter)
-        .sort({ name: 1 })
-        .limit(limit)
-        .skip(skip)
-    ])
-    const totalPages = Math.ceil(totalDocs / limit)
+      .sort({ name: 1 })
+      .limit(limit)
+      .skip(skip)
+    ]);
+    const totalPages = Math.ceil(totalDocs / limit);
 
     const response = {
       docs: categories,

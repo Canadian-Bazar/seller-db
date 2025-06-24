@@ -1,0 +1,153 @@
+import { matchedData } from 'express-validator'
+import Products from '../models/products.schema.js'
+import buildErrorObject from '../utils/buildErrorObject.js'
+import buildResponse from '../utils/buildResponse.js'
+import handleError from '../utils/handleError.js'
+import mongoose from 'mongoose'
+import httpStatus from 'http-status'
+
+
+
+
+export const getProductsController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+    const pipeline = [];
+
+    const page = parseInt(validatedData.page || 1, 10);
+    const limit = Math.min(parseInt(validatedData.limit || 10, 10), 50);
+    const offset = (page - 1) * limit;
+
+    const sellerId = req.user._id;
+    const matchStage = {
+      seller: new mongoose.Types.ObjectId(sellerId)
+    };
+
+    console.log(validatedData.search)
+
+    if (validatedData.search) {
+      matchStage.name = {
+        $regex: validatedData.search,
+        $options: 'i'
+      };
+    }
+
+    if (validatedData.isVerified) {
+      matchStage.isVerified = true;
+    }
+
+    if (validatedData.inComplete) {
+      matchStage.isComplete = false;
+    }
+
+    if (validatedData.categories && validatedData.categories.length > 0) {
+      matchStage.categoryId = {
+        $in: validatedData.categories.map(id => new mongoose.Types.ObjectId(id))
+      };
+    }
+
+    pipeline.push({ $match: matchStage });
+
+    // Lookup Category to get category name
+    pipeline.push({
+      $lookup: {
+        from: 'Category',
+        localField: 'categoryId',
+        foreignField: '_id',
+        as: 'category'
+      }
+    });
+    pipeline.push({
+      $unwind: {
+        path: '$category',
+        preserveNullAndEmptyArrays: true
+      }
+    });
+
+    // Lookup ProductStats to flatten important stats
+    pipeline.push({
+      $lookup: {
+        from: 'ProductStats',
+        localField: '_id',
+        foreignField: 'productId',
+        as: 'stats'
+      }
+    });
+    pipeline.push({
+      $unwind: {
+        path: '$stats',
+        preserveNullAndEmptyArrays: true
+      }
+    });
+
+    // Sorting logic
+    let sortStage = { createdAt: -1 };
+    switch (validatedData.sortBy) {
+      case 'mostViewed':
+        sortStage = { 'stats.viewCount': -1 };
+        break;
+      case 'mostQuoted':
+        sortStage = { 'stats.quotationCount': -1 };
+        break;
+      case 'mostAcceptedQuotations':
+        sortStage = { 'stats.acceptedQuotationCount': -1 };
+        break;
+      case 'mostRejectedQuotations':
+        sortStage = { 'stats.rejectedQuotationCount': -1 };
+        break;
+    }
+
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({ $skip: offset });
+    pipeline.push({ $limit: limit });
+
+    // Final projection
+    pipeline.push({
+      $project: {
+        name: 1,
+        isVerified: 1,
+        avgRating: 1,
+        images: { $slice: ['$images', 2] }, // first 2 images only
+        minPrice: 1,
+        maxPrice: 1,
+        deliveryDays: 1,
+        isCustomizable: 1,
+        moq: 1,
+        createdAt: 1,
+
+        // From stats
+        viewCount: '$stats.viewCount',
+        quotationCount: '$stats.quotationCount',
+        acceptedQuotationCount: '$stats.acceptedQuotationCount',
+        rejectedQuotationCount: '$stats.rejectedQuotationCount',
+
+        // From category
+        categoryName: '$category.name'
+      }
+    });
+
+    const products = await Products.aggregate(pipeline);
+
+    // Count total matching products
+    const countResult = await Products.aggregate([
+      { $match: matchStage },
+      { $count: 'count' }
+    ]);
+    const total = countResult[0]?.count || 0;
+
+    const response = {
+      docs: products,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasPrev: page > 1,
+      hasNext: page * limit < total
+    };
+
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+

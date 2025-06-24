@@ -61,7 +61,7 @@ export const getProductAnalytics = async (req, res) => {
       //   throw buildErrorObject(httpStatus.FORBIDDEN, `Access denied. You don't own these products: ${unauthorizedProducts.join(', ')}`);
       // }
       
-      verifiedProductIds = foundProductIds;
+      verifiedProductIds = products;
     }
     
     let analyticsData;
