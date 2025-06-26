@@ -27,6 +27,8 @@ export const createProductController = async (req, res) => {
 
         const seller = await Seller.findById(userId)
 
+        console.log(seller)
+
 
 
 

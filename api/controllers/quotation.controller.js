@@ -9,6 +9,7 @@ import notificationMessages from '../utils/notificationMessages.js';
 import { matchedData } from 'express-validator';
 import Chat from '../models/chat.schema.js'
 import Message from '../models/messages.schema.js'
+import mongoose from 'mongoose';
 
 /**
  * Retrieves a paginated list of quotations.
@@ -33,101 +34,88 @@ import Message from '../models/messages.schema.js'
  * which are then handled by the error handler.
  */
 export const getAllQuotationsController = async (req, res) => {
-    try {
-        const validatedData = matchedData(req);
-        let { page = 1, limit = 10, status } = validatedData;
+  try {
+    const validatedData = matchedData(req);
+    let { page = 1, limit = 10, status, search, productIds, seen } = validatedData;
 
-        limit = Math.min(Number(limit), 50);
-        page = Number(page);
+    const userId = req.user._id;
 
-        const filter = {};
-        if (status) {
-            filter.status = status;
-        }
+    limit = Math.min(Number(limit), 50);
+    page = Number(page);
 
-        const skip = (page - 1) * limit;
+    const filter = {
+      seller: new mongoose.Types.ObjectId(userId)
+    };
 
-        const totalQuotations = await Quotation.countDocuments(filter);
-
-        const quotations = await Quotation.find(filter)
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        const respose = {
-            docs:quotations ,
-            hasPrev: page > 1,
-            hasNext: skip + limit < totalQuotations,
-            totalPages: Math.ceil(totalQuotations / limit),
-        }
-
-        res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, respose));
-    } catch (err) {
-        handleError(res, err);
+    if (status) {
+      filter.status = status;
     }
-}
+
+    if (seen !== undefined) {
+      filter.seen = seen === 'true' || seen === true;
+    }
+
+    if (productIds && Array.isArray(productIds)) {
+      filter.productId = { $in: productIds };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const sortOrder = { seen: 1, createdAt: -1 }; 
+
+    const totalQuotations = await Quotation.countDocuments(filter);
+
+    const quotations = await Quotation.find(filter)
+      .populate({
+        path: 'productId',
+        select: 'name'
+      })
+      .populate({
+        path: 'buyer',
+        select: 'fullName profilePic avatar'
+      })
+      .sort(sortOrder)
+      .skip(skip)
+      .limit(limit);
+
+    const filteredQuotations = quotations.filter(q => q.productId);
+
+    const response = {
+      docs: filteredQuotations.map(q => ({
+        _id: q._id,
+        status: q.status,
+        priceRange: {
+          min: q.minPrice,
+          max: q.maxPrice
+        },
+        quantity: q.quantity,
+        attributes: q.attributes,
+        deadline: q.deadline,
+        description: q.description,
+        seen: q.seen,
+        createdAt: q.createdAt,
+        productName: q.productId?.name,
+        buyerName: q.buyer?.fullName,
+        buyerProfilePic: q.buyer?.profilePic,
+        buyerAvatar: q.buyer?.avatar
+      })),
+      hasPrev: page > 1,
+      hasNext: skip + limit < totalQuotations,
+      totalPages: Math.ceil(totalQuotations / limit),
+    };
+
+    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+  } catch (err) {
+    handleError(res, err);
+  }
+};
 
 
 
 
 
-/**
- * const BuyerNotificationSchema = new mongoose.Schema({
-     recipient:{
-         type: mongoose.Types.ObjectId,
-         ref: 'Buyer',
-         required: true,
-         index: true
-     } ,
- 
-     sender: {
-         model: {
-             type: String,
-             enum: ['Seller', 'Admin', 'System'],
-             required: true
-         },
-         id: {
-             type: mongoose.Schema.Types.ObjectId,
-             refPath: 'sender.model',
-             required: function() {
-                 return this.sender.model !== 'System';
-             }
-         },
-         name: {
-             type: String,
-             required: true
-         },
-         image: {
-             type: String
-         }
-     },
-     type: {
-         type: String,
-         enum: ['quote_accepted', 'quote_rejected', 'quote_updated', 'admin_message', 'system_alert', 'other'],
-         required: true,
-         index: true
-     },
-     
-     message: {
-         type: String,
-         required: true
-     },
-     isRead: {
-         type: Boolean,
-         default: false,
-         index: true
-     },
-     
-     isArchived: {
-         type: Boolean,
-         default: false,
-         index: true
-     }
- } , { 
-     timestamps:true ,
-     collection:'BuyerNotifications'
- })
-*/
+
+
 
 export const mutateQuotationStatusController = async (req, res) => {
     try {
@@ -257,4 +245,67 @@ export const mutateQuotationStatusController = async (req, res) => {
     } catch (err) {
         handleError(res, err);
     }
+};
+
+
+
+export const getQuotationById = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+    const userId = req.user._id;
+
+
+    console.log(validatedData)
+
+    const quotation = await Quotation.findOneAndUpdate(
+      {
+        _id: validatedData.quotationId,
+        seller:userId
+      },
+      {
+        $set: { seen: true }
+      },
+      { new: true }
+    )
+      .populate({
+        path: 'productId',
+        select: 'name images' 
+      })
+      .populate({
+        path: 'buyer',
+        select: 'fullName profilePic'
+      });
+
+    if (!quotation) {
+      return res.status(httpStatus.NOT_FOUND).json(buildResponse(httpStatus.NOT_FOUND,  'Quotation not found' ));
+    }
+
+    const response = {
+      _id: quotation._id,
+      status: quotation.status,
+      quantity: quotation.quantity,
+      minPrice: quotation.minPrice,
+      maxPrice: quotation.maxPrice,
+      deadline: quotation.deadline,
+      description: quotation.description,
+      attributes: quotation.attributes,
+      state: quotation.state,
+      pinCode: quotation.pinCode,
+      seen: quotation.seen,
+      createdAt: quotation.createdAt,
+      updatedAt: quotation.updatedAt,
+        productName: quotation.productId?.name,
+        productImages: quotation.productId?.images?.slice(0, 3)  ,
+      
+     
+        buyerName: quotation.buyer?.fullName,
+        buyerProfilePic: quotation.buyer?.profilePic ,
+        buyerAvatar:quotation.buyer?.avatar
+      
+    }
+
+    res.status(200).json(buildResponse(200, response));
+  } catch (err) {
+    handleError(res, err);
+  }
 };

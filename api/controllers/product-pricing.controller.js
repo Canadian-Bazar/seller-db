@@ -7,6 +7,7 @@ import  httpStatus  from 'http-status';
 import mongoose from 'mongoose'
 import { markStepCompleteAsync } from '../helpers/markStepComplete.js'
 import ProductPricing from '../models/product-pricing.schema.js'
+import quotationsSchema from '../models/quotations.schema.js'
 
 export const syncProductPricingController = async (req, res) => {
     try {
@@ -19,6 +20,12 @@ export const syncProductPricingController = async (req, res) => {
         if (!productExists) {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such product found');
         }
+
+        // const moq = quantityPriceTiers[0].min
+        // const minPrice = quantityPriceTiers[0].price 
+
+
+
 
         const updatedPricing = await ProductPricing.findOneAndUpdate(
             { productId: productId },

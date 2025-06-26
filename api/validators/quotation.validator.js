@@ -20,3 +20,62 @@ export const validateMutateQuotation =[
 
 
 ]
+
+
+
+export const validatedGetQuotations =[
+    check('status')
+    .optional()
+    .isString()
+    .withMessage('Status must be a valid string')
+    .isIn(['accepted' ,'rejected'  , 'pending' , 'negotiation'])
+    .withMessage('Invalid quotation status requested') ,
+
+    check('sortBy')
+     .optional()
+     .isString()
+     .withMessage('Sort By should be a valid string')
+     .isIn(['asc , desc'])
+     .withMessage('Invalid sort by parameter') ,
+
+    check('productIds')
+    .optional()
+    .isArray()
+    .withMessage('Array should be an array') 
+    .isLength({min:1})
+    .withMessage('Product Ids should not be empty') ,
+
+    check('productsIds.*')
+    .isMongoId()
+    .withMessage('Invalid product id') ,
+
+
+    check('seen')
+    .optional()
+    .isBoolean()
+    .withMessage("Seen should be a boolean") ,
+    
+
+
+     (req , res, next) =>validateRequest(req , res, next)
+
+
+
+
+
+    
+
+]
+
+
+export const validateGetQuotationById = [
+    param('quotationId')
+    .exists()
+    .withMessage('Quotation ID is required')
+    .notEmpty()
+    .withMessage('Quotation ID is required')
+    .isMongoId()
+    .withMessage('Invalid Quoatation ID') ,
+
+    (req , res , next) =>validateRequest(req , res , next)
+]

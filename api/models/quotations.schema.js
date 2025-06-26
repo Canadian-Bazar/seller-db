@@ -2,13 +2,12 @@ import mongoose from 'mongoose'
 
 
 const QuotationSchema = new mongoose.Schema({
-    slug:{
-        type:String ,
-        required:true ,
-        index:true ,
-        trim:true ,
-        lowercase:true
-    } ,
+       productId:{
+           type:mongoose.Types.ObjectId , 
+           ref:"Product" , 
+           required:true ,
+           index:true
+       } ,
     buyer:{
         type:mongoose.Types.ObjectId ,
         ref:'Buyer' ,
@@ -43,8 +42,8 @@ const QuotationSchema = new mongoose.Schema({
     ] ,
     status:{
         type:String ,
-        default:'sent' ,
-        enum:['sent' , 'in-progess' , 'accepted' ,'rejected'] ,
+        default:'pending' ,
+        enum:['pending' , 'accpeted'  ,'rejected' , 'negotation'] ,
         required:true
     } ,
 
@@ -64,6 +63,13 @@ const QuotationSchema = new mongoose.Schema({
     pinCode:{
         type:String ,
         required:true
+    }  ,
+
+    seen:{
+        type:Boolean ,
+        default:false ,
+        required:true
+
     }
 
 } , {collection:'Quotation' , timestamps:true})
