@@ -35,7 +35,7 @@ export const signupController = async (req, res) => {
     req = matchedData(req)
     const existingSeller = await Seller.findOne({ email: req.email }).lean()
     if (existingSeller?._id) {
-      throw buildErrorObject(httpStatus.CONFLICT, 'Seller Already Exists')
+      throw buildErrorObject(httpStatus.CONFLICT, 'User Already Exists')
     }
 
     const sellerRole = await Roles.findOne({ role: 'seller' }).lean()
@@ -49,9 +49,9 @@ export const signupController = async (req, res) => {
 
     await Seller.create(req)
 
-    res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED, {
-      message: 'Seller Created Successfully',
-    }))
+    res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED, 
+     'Seller Created Successfully',
+    ))
   } catch (err) {
     handleError(res, err)
   }

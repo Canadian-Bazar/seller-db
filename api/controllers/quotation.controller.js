@@ -294,17 +294,17 @@ export const getQuotationById = async (req, res) => {
       seen: quotation.seen,
       createdAt: quotation.createdAt,
       updatedAt: quotation.updatedAt,
-        productName: quotation.productId?.name,
-        productImages: quotation.productId?.images?.slice(0, 3)  ,
+      productName: quotation.productId?.name,
+       productImages: quotation.productId?.images?.slice(0, 3)  ,
       
      
-        buyerName: quotation.buyer?.fullName,
-        buyerProfilePic: quotation.buyer?.profilePic ,
-        buyerAvatar:quotation.buyer?.avatar
+       buyerName: quotation.buyer?.fullName,
+       buyerProfilePic: quotation.buyer?.profilePic ,
+    buyerAvatar:quotation.buyer?.avatar
       
     }
 
-    res.status(200).json(buildResponse(200, response));
+    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
   } catch (err) {
     handleError(res, err);
   }

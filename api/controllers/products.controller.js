@@ -114,6 +114,11 @@ export const getProductsController = async (req, res) => {
         isCustomizable: 1,
         moq: 1,
         createdAt: 1,
+        isComplete:1 ,
+        completionPercentage:1 ,
+        incompleteSteps: 1 ,
+
+
 
         // From stats
         viewCount: '$stats.viewCount',
