@@ -57,3 +57,9 @@ export const validatedGetProducst =[
   (req, res, next) => validateRequest(req, res, next)
 
 ]
+
+
+export const validateGetProductNames =[
+  ...paginationValidator ,
+  (req , res , next)=>validateRequest(req , res, next)
+]

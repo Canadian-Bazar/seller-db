@@ -6,6 +6,7 @@ import { uploadFile } from "../helpers/aws-s3.js";
 import  httpStatus  from 'http-status';
 import handleError from "../utils/handleError.js";
 import { matchedData } from "express-validator";
+import { markStepCompleteAsync } from "../helpers/markStepComplete.js";
 
 export const syncImagesControllers = async (req, res) => {
     try {
@@ -41,6 +42,9 @@ export const syncImagesControllers = async (req, res) => {
             { _id: productId, seller: userId },
             { $set: { images: updatedImages } }
         );
+
+
+        await markStepCompleteAsync(productId , 'images')
 
         res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, 'Images synced successfully'));
     } catch (err) {

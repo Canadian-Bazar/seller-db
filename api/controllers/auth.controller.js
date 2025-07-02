@@ -108,7 +108,7 @@ export const loginController = async (req, res) => {
     }
     seller.loginAttempts = 0
     await seller.save()
-    seller = await Seller.findById(seller._id).lean().select('companyName companyLogo isVerified isProfileComplete  logo')
+    seller = await Seller.findById(seller._id).lean().select('companyName  isVerified isProfileComplete  logo email')
     if (!seller) {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
     }

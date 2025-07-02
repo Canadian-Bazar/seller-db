@@ -156,3 +156,45 @@ export const getProductsController = async (req, res) => {
   }
 };
 
+
+export const getProductNamesController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+
+    const page = parseInt(validatedData.page || 1, 10);
+    const limit = Math.min(parseInt(validatedData.limit || 10, 10), 50);
+    const skip = (page - 1) * limit;
+
+    const matchStage = {
+      seller: req.user._id,
+    };
+
+    if (validatedData.search) {
+      matchStage.name = {
+        $regex: validatedData.search,
+        $options: 'i',
+      };
+    }
+
+    const [products, totalProducts] = await Promise.all([
+      Products.find(matchStage)
+        .skip(skip)
+        .limit(limit)
+        .select('name _id'),
+      Products.countDocuments(matchStage),
+    ]);
+
+    const response = {
+      hasPrev: page > 1,
+      hasNext: page * limit < totalProducts,
+      docs: products,
+      totalPages: Math.ceil(totalProducts / limit),
+      currentPage: page,
+    };
+
+    return res.json(response);
+  } catch (err) {
+    return handleError(res, err);
+  }
+};
+

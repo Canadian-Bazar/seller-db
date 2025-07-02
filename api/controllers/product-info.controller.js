@@ -81,7 +81,7 @@ export const createProductController = async (req, res) => {
 
 
         res.status(httpStatus.CREATED).json(
-            buildResponse(httpStatus.CREATED, 'Product created successfully', )
+            buildResponse(httpStatus.CREATED, savedProduct )
         );
 
 

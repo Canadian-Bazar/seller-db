@@ -122,10 +122,9 @@ export const mutateQuotationStatusController = async (req, res) => {
         const validatedData = matchedData(req);
         const { quotationId, status } = validatedData;
 
-        // Find quotation with valid status and belonging to the current seller
         const quotation = await Quotation.findOne({ 
             _id: quotationId, 
-            status: { $in: ['in-progress', 'sent'] }, 
+            status: { $in: ['pending', 'negotiation'] }, 
             seller: req.user._id 
         }).populate('seller');
         
@@ -133,30 +132,89 @@ export const mutateQuotationStatusController = async (req, res) => {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Quotation not found or already processed');
         }
 
-        // Update quotation status
+        const previousStatus = quotation.status; 
+        
         quotation.status = status;
         await quotation.save();
 
-        // Get buyer and seller IDs
         const buyer = quotation.buyer;
         const seller = quotation.seller._id;
-        
-        // Find or create chat between buyer and seller
+
+        if (status === 'rejected' && previousStatus === 'pending') {
+            const notificationData = {
+                recipient: buyer,
+                sender: {
+                    model: 'Seller',
+                    id: seller,
+                    name: quotation.seller.companyName,
+                    image: quotation.seller.profileImage || null
+                },
+                type: 'quote_rejected',
+                message: notificationMessages.buyer.quotationRejected
+            };
+
+            await sendNotification(notificationData);
+
+            return res.status(httpStatus.OK).json(
+                buildResponse(httpStatus.OK, 'Quotation rejected successfully')
+            );
+        }
+
         let existingChat = await Chat.findOne({ buyer, seller });
+
+        console.log("existingChat" , existingChat)
+        
         if (!existingChat) {
             existingChat = await Chat.create({ 
                 buyer, 
                 seller,
-                quotation: quotationId,
+                activeQuotation: quotationId,
+                quotationHistory: [{
+                    quotation: quotationId,
+                    startedAt: new Date(),
+                    status: status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'pending'
+                }],
                 status: 'active',
                 unreadBy: 'buyer'
             });
+        } else {
+            if (existingChat.activeQuotation) {
+                const historyIndex = existingChat.quotationHistory.findIndex(
+                    h => h.quotation.toString() === existingChat.activeQuotation.toString()
+                );
+                if (historyIndex !== -1) {
+                    existingChat.quotationHistory[historyIndex].status = 'completed';
+                }
+            }
+            
+            existingChat.activeQuotation = quotationId;
+            
+            const existsInHistory = existingChat.quotationHistory.some(
+                h => h.quotation.toString() === quotationId.toString()
+            );
+            
+            if (!existsInHistory) {
+                existingChat.quotationHistory.push({
+                    quotation: quotationId,
+                    startedAt: new Date(),
+                    status: status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'pending'
+                });
+            } else {
+                const historyIndex = existingChat.quotationHistory.findIndex(
+                    h => h.quotation.toString() === quotationId.toString()
+                );
+                if (historyIndex !== -1) {
+                    existingChat.quotationHistory[historyIndex].status = 
+                        status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'pending';
+                }
+            }
         }
 
         let messageContent;
         let messageType;
         let notificationType;
         let notificationContent;
+        let newMessage;
 
         if (status === 'accepted') {
             messageContent = "I've accepted your quotation request. Let's proceed with the next steps.";
@@ -173,7 +231,7 @@ export const mutateQuotationStatusController = async (req, res) => {
                 messageType: 'quotation_accepted',
                 isRead: false
             });
-        } else if (status === 'rejected') {
+        } else if (status === 'rejected' && previousStatus === 'negotiation') {
             messageContent = "I'm unable to proceed with this quotation at this time.";
             messageType = 'text';
             notificationType = 'quote_rejected';
@@ -188,14 +246,15 @@ export const mutateQuotationStatusController = async (req, res) => {
                 messageType: 'quotation_rejected',
                 isRead: false
             });
-        } else {
+        } else { 
             messageContent = "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.";
             messageType = 'text';
             notificationType = 'quote_negotiation';
             notificationContent = notificationMessages.buyer.quotationNegotiation || 'Seller wants to negotiate your quotation';
         }
 
-        const newMessage = await Message.create({
+        // Create the main status message
+        newMessage = await Message.create({
             senderId: seller,
             senderModel: 'Seller',
             content: messageContent,
@@ -205,9 +264,9 @@ export const mutateQuotationStatusController = async (req, res) => {
             isRead: false
         });
 
-        // Always create a quotation_created system message if it's the first message in the chat
+        // Create quotation_created system message if it's the first interaction
         const messageCount = await Message.countDocuments({ chat: existingChat._id });
-        if (messageCount <= 1) {
+        if (messageCount <= 2) {
             await Message.create({
                 senderId: seller,
                 senderModel: 'Seller',
@@ -219,12 +278,12 @@ export const mutateQuotationStatusController = async (req, res) => {
             });
         }
 
-        // Update the chat's last message
+        // Update chat
         existingChat.lastMessage = newMessage._id;
         existingChat.unreadBy = 'buyer';
         await existingChat.save();
 
-        // Send notification to buyer
+        // Send notification
         const notificationData = {
             recipient: buyer,
             sender: {

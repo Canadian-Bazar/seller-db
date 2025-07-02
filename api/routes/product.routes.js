@@ -19,4 +19,11 @@ router.get(
 )
 
 
+router.get(
+    '/names' ,
+    productValidators.validateGetProductNames ,
+    productsControllers.getProductNamesController
+)
+
+
     export default router
