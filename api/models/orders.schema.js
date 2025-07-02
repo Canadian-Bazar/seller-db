@@ -11,7 +11,29 @@ const OrderSchema = new mongoose.Schema({
         type:mongoose.Types.ObjectId,
         ref:'Address'  ,
         required:true ,
+    }  ,
+
+    billingAddress:{
+        type:mongoose.Types.ObjectId,
+        ref:'Address'  ,
+        required:true ,
+
+    } ,
+    orderId:{
+        type:String , 
+        required:true , 
+        index:true
+    } ,
+
+    status:{
+        type:String ,
+        enum :['pending' , 'ready-to-shipped' , 'shipped' , 'transit' , 'out-for-delivery' , 'delivered' , 'transit' , 'cancelled' , 'returned' , 'failed-to-deliver'] ,
+        default:'pending'
     } 
+
+   
+
+ 
 
 
    

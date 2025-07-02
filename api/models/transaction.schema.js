@@ -32,6 +32,15 @@ const TransactionSchema = new mongoose.Schema({
         } ,
 
 
+        paymentType:{
+        type:mongoose.Types.ObjectId ,
+        ref:'PaymentMethod' ,
+        required:true
+     } 
+
+
+
+
 
      
 } , {

@@ -70,6 +70,10 @@ const QuotationSchema = new mongoose.Schema({
         default:false ,
         required:true
 
+    }  ,
+
+    finalPrice:{
+        
     }
 
 } , {collection:'Quotation' , timestamps:true})

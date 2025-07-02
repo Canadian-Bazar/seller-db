@@ -133,7 +133,6 @@ export const getProductsController = async (req, res) => {
 
     const products = await Products.aggregate(pipeline);
 
-    // Count total matching products
     const countResult = await Products.aggregate([
       { $match: matchStage },
       { $count: 'count' }
@@ -167,6 +166,7 @@ export const getProductNamesController = async (req, res) => {
 
     const matchStage = {
       seller: req.user._id,
+      isComplete:true
     };
 
     if (validatedData.search) {
@@ -192,7 +192,7 @@ export const getProductNamesController = async (req, res) => {
       currentPage: page,
     };
 
-    return res.json(response);
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK ,  hresponse));
   } catch (err) {
     return handleError(res, err);
   }
