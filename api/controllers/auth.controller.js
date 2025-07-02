@@ -169,13 +169,24 @@ export const verifyTokensController = async (req, res) => {
     accessToken = decrypt(accessToken)
 
     try {
-      jwt.verify(accessToken, process.env.AUTH_SECRET)
+      let seller = jwt.verify(accessToken, process.env.AUTH_SECRET)
+      
+      seller = {
+        _id: seller._id,
+        email: seller.email,
+        companyName: seller.companyName,
+        companyLogo: seller.logo,
+        isVerified: seller.isVerified || false,
+        isProfileComplete: seller.isProfileComplete || false,
+        role: seller.role,
+      }
 
       res
         .status(httpStatus.OK)
         .json(buildResponse(httpStatus.OK, {
           success: true,
           message: 'Access token is valid',
+          user : seller
         }))
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
@@ -192,7 +203,10 @@ export const verifyTokensController = async (req, res) => {
             _id: seller._id,
             email: seller.email,
             companyName: seller.companyName,
-            roleId: seller.roleId,
+            companyLogo: seller.logo,
+            isVerified: seller.isVerified || false,
+            isProfileComplete: seller.isProfileComplete || false,
+            role: seller.role,
           }
 
           const { accessToken } = generateTokens(seller)
@@ -206,6 +220,7 @@ export const verifyTokensController = async (req, res) => {
             .json(buildResponse(httpStatus.CREATED, {
               success: true,
               message: 'Access token generated successfully',
+              user : seller
             }))
         } catch (err) {
           throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Session expired, please login again to continue')
