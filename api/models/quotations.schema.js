@@ -72,9 +72,7 @@ const QuotationSchema = new mongoose.Schema({
 
     }  ,
 
-    finalPrice:{
-        
-    }
+  
 
 } , {collection:'Quotation' , timestamps:true})
 
