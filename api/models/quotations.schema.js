@@ -43,7 +43,7 @@ const QuotationSchema = new mongoose.Schema({
     status:{
         type:String ,
         default:'pending' ,
-        enum:['pending' , 'accpeted'  ,'rejected' , 'negotation'] ,
+        enum:['pending' , 'accepted'  ,'rejected' , 'negotiation'] ,
         required:true
     } ,
 

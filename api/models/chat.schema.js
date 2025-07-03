@@ -15,30 +15,40 @@ const ChatSchema = new mongoose.Schema({
         ref: 'Seller'
     },
     
-    // Current active quotation
-    activeQuotation: {
+    quotation: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'Quotation'
     },
     
-    // History of quotations discussed in this chat
-    quotationHistory: [{
-        quotation: {
+    phase: {
+        type: String,
+        enum: ['negotiation', 'invoice_sent', 'invoice_accepted', 'invoice_rejected', 'order_created', 'completed'],
+        default: 'negotiation'
+    },
+    
+    activeInvoice: {
+        invoice: {
             type: mongoose.Schema.Types.ObjectId,
-            required: true,
-            ref: 'Quotation'
-        },
-        startedAt: {
-            type: Date,
-            default: Date.now
+            ref: 'Invoice'
         },
         status: {
             type: String,
             enum: ['pending', 'accepted', 'rejected', 'expired'],
-            default: 'pending'
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        },
+        respondedAt: {
+            type: Date
         }
-    }],
+    },
+    
+    order: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Order'
+    },
     
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
@@ -53,8 +63,19 @@ const ChatSchema = new mongoose.Schema({
     
     status: {
         type: String,
-        enum: ['active', 'completed'],
+        enum: ['active', 'completed', 'cancelled'],
         default: 'active'
+    },
+    
+    lastSeenAt: {
+        buyer: {
+            type: Date,
+            default: null
+        },
+        seller: {
+            type: Date,
+            default: null
+        }
     }
 }, {timestamps: true, collection: 'Chat'})
 

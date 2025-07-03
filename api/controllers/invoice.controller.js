@@ -5,7 +5,9 @@ import buildResponse from '../utils/buildResponse.js';
 import { matchedData } from 'express-validator';
 import httpStatus from 'http-status';
 import jwt from 'jsonwebtoken';
-import Quotation from '../models/quotations.schema.js'
+import Quotation from '../models/quotations.schema.js';
+import Chat from '../models/chat.schema.js';
+import Message from '../models/messages.schema.js';
 
 const generateInvoiceToken = (invoiceId) => {
     return jwt.sign(
@@ -26,42 +28,78 @@ export const generateInvoice = async (req, res) => {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Quotation not found');
         }
 
+        if(quotation.status!=='negotiation'){
+            throw buildErrorObject(httpStatus.BAD_REQUEST , 'Quotation already processed')
+        }
+
         if (quotation.seller.toString() !== sellerId.toString()) {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You are not authorized to create invoice for this quotation');
         }
 
-    
-
-        const existingInvoice = await Invoice.findOne({ quotationId: validatedData.quotationId });
+        const chat = await Chat.findOne({ quotation: validatedData.quotationId });
         
-        if (existingInvoice) {
-            throw buildErrorObject(httpStatus.CONFLICT, 'Invoice already exists for this quotation');
+        if (!chat) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Chat not found for this quotation');
         }
 
-        if (validatedData.negotiatedPrice > quotation.totalAmount) {
-            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Negotiated price cannot exceed original quotation amount');
+        if (chat.phase !== 'negotiation') {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, `Cannot create invoice. Chat is in ${chat.phase} phase`);
         }
+
+        if (chat.activeInvoice && chat.activeInvoice.invoice) {
+            const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice);
+            if (existingInvoice && existingInvoice.status === 'pending') {
+                throw buildErrorObject(httpStatus.CONFLICT, 'There is already an active invoice for this quotation');
+            }
+        }
+
+      
+
+        const totalAmount = validatedData.negotiatedPrice + (validatedData.taxAmount || 0) + (validatedData.shippingCharges || 0);
 
         const invoiceData = {
             ...validatedData,
-            sellerId
+            sellerId,
+            chatId: chat._id,
+            totalAmount: totalAmount
         };
 
         const invoice = await Invoice.create(invoiceData);
+
+        await Chat.findByIdAndUpdate(chat._id, {
+            phase: 'invoice_sent',
+            activeInvoice: {
+                invoice: invoice._id,
+                status: 'pending',
+                createdAt: new Date()
+            }
+        });
+
+        await Message.create({
+            senderId: sellerId,
+            senderModel: 'Seller',
+            content: `Invoice sent for ${validatedData.negotiatedPrice}`,
+            chat: chat._id,
+            quotationId: validatedData.quotationId,
+            messageType: 'text',
+            isRead: false
+        });
+
         const token = generateInvoiceToken(invoice._id);
         const invoiceLink = `${process.env.INVOICE_FRONTEND_URL}/${token}`;
 
         res.status(httpStatus.CREATED).json(
-            buildResponse(httpStatus.CREATED, 
-                invoiceLink
-            )
+            buildResponse(httpStatus.CREATED, {
+                message: 'Invoice created successfully',
+                invoiceId: invoice._id,
+                invoiceLink: invoiceLink
+            })
         );
 
     } catch (err) {
         handleError(res, err);
     }
 };
-
 
 export const getSellerInvoices = async (req, res) => {
     try {
@@ -73,6 +111,8 @@ export const getSellerInvoices = async (req, res) => {
 
         const invoices = await Invoice.find(filter)
             .populate('quotationId')
+            .populate('chatId')
+            .populate('buyerId', 'fullName email')
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
@@ -100,7 +140,8 @@ export const getInvoiceById = async (req, res) => {
 
         const invoice = await Invoice.findOne({ _id: invoiceId, sellerId })
             .populate('quotationId')
-            .populate('buyerId', 'name email');
+            .populate('chatId')
+            .populate('buyerId', 'fullName email');
 
         if (!invoice) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Invoice not found');
@@ -129,6 +170,17 @@ export const updateInvoice = async (req, res) => {
 
         if (invoice.status !== 'pending') {
             throw buildErrorObject(httpStatus.CONFLICT, 'Cannot update processed invoice');
+        }
+
+        // Check if chat is still in invoice_sent phase
+        const chat = await Chat.findById(invoice.chatId);
+        if (chat.phase !== 'invoice_sent') {
+            throw buildErrorObject(httpStatus.CONFLICT, 'Cannot update invoice. Chat phase has changed');
+        }
+
+        // Recalculate total if needed
+        if (validatedData.negotiatedPrice) {
+            validatedData.totalAmount = validatedData.negotiatedPrice + (validatedData.taxAmount || 0) + (validatedData.shippingCharges || 0);
         }
 
         const updatedInvoice = await Invoice.findByIdAndUpdate(
@@ -163,6 +215,12 @@ export const deleteInvoice = async (req, res) => {
         if (invoice.status !== 'pending') {
             throw buildErrorObject(httpStatus.CONFLICT, 'Cannot delete processed invoice');
         }
+
+        // Reset chat phase back to negotiation
+        await Chat.findByIdAndUpdate(invoice.chatId, {
+            phase: 'negotiation',
+            $unset: { activeInvoice: 1 }
+        });
 
         await Invoice.findByIdAndDelete(invoiceId);
 

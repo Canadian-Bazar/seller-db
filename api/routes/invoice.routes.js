@@ -1,46 +1,51 @@
 import express from 'express'
 import trimRequest from 'trim-request'
-import * as sellerInvoiceControllers from '../controllers/invoice.controller.js'
-import * as sellerInvoiceValidators from '../validators/invoice.validator.js'
+import * as invoiceControllers from '../controllers/invoice.controller.js'
+import * as invoiceValidators from '../validators/invoice.validator.js'
 import { requireAuth } from '../middlewares/auth.middleware.js'
 
 const router = express.Router()
 
 router.use(trimRequest.all)
 
+
+
+// Seller routes (auth required)
+router.use(requireAuth)
+
+// Generate invoice (seller)
 router.post(
   '/generate',
-  requireAuth,
-  sellerInvoiceValidators.generateInvoiceValidator,
-  sellerInvoiceControllers.generateInvoice
+  invoiceValidators.generateInvoiceValidator,
+  invoiceControllers.generateInvoice
 )
 
+// Get seller invoices
 router.get(
-  '/list',
-  requireAuth,
-  sellerInvoiceValidators.getSellerInvoicesValidator,
-  sellerInvoiceControllers.getSellerInvoices
+  '/seller/list',
+  invoiceValidators.getSellerInvoicesValidator,
+  invoiceControllers.getSellerInvoices
 )
 
+// Get invoice by ID (seller)
 router.get(
-  '/:invoiceId',
-  requireAuth,
-  sellerInvoiceValidators.getInvoiceByIdValidator,
-  sellerInvoiceControllers.getInvoiceById
+  '/seller/:invoiceId',
+  invoiceValidators.getInvoiceByIdValidator,
+  invoiceControllers.getInvoiceById
 )
 
+// Update invoice (seller)
 router.put(
-  '/:invoiceId',
-  requireAuth,
-  sellerInvoiceValidators.updateInvoiceValidator,
-  sellerInvoiceControllers.updateInvoice
+  '/seller/:invoiceId',
+  invoiceValidators.updateInvoiceValidator,
+  invoiceControllers.updateInvoice
 )
 
+// Delete invoice (seller)
 router.delete(
-  '/:invoiceId',
-  requireAuth,
-  sellerInvoiceValidators.deleteInvoiceValidator,
-  sellerInvoiceControllers.deleteInvoice
+  '/seller/:invoiceId',
+  invoiceValidators.deleteInvoiceValidator,
+  invoiceControllers.deleteInvoice
 )
 
 export default router
