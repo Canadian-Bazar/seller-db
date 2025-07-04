@@ -115,19 +115,13 @@ export const loginController = async (req, res) => {
     seller.role = 'seller'
     const { accessToken, refreshToken } = generateTokens(seller)
     res
-      .cookie('accessToken', accessToken, {
+       .cookie('accessToken', accessToken, {
         httpOnly: true,
-        secure: true,
-        sameSite:'None',
-        // maxAge:1000*60*60*24 ,
-
-        
+        secure: false,
       })
       .cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: true,
-        sameSite:'None',
-        // maxAge:1000*60*60*24 ,
+        secure: false,
       })
       .status(httpStatus.ACCEPTED)
       .json(buildResponse(httpStatus.ACCEPTED, seller))
