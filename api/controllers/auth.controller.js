@@ -116,12 +116,18 @@ export const loginController = async (req, res) => {
     const { accessToken, refreshToken } = generateTokens(seller)
     res
       .cookie('accessToken', accessToken, {
-        httpOnly: process.env.NODE_ENV === 'development',
-        secure: !process.env.NODE_ENV === 'development',
+        httpOnly: true,
+        secure: true,
+        sameSite:'None',
+        // maxAge:1000*60*60*24 ,
+
+        
       })
       .cookie('refreshToken', refreshToken, {
-        httpOnly: process.env.NODE_ENV === 'development',
-        secure: !process.env.NODE_ENV === 'development',
+        httpOnly: true,
+        secure: true,
+        sameSite:'None',
+        // maxAge:1000*60*60*24 ,
       })
       .status(httpStatus.ACCEPTED)
       .json(buildResponse(httpStatus.ACCEPTED, seller))
