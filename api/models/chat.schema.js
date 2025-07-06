@@ -42,6 +42,9 @@ const ChatSchema = new mongoose.Schema({
         },
         respondedAt: {
             type: Date
+        } ,
+        link:{
+            type:String ,
         }
     },
     

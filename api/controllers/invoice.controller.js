@@ -16,7 +16,7 @@ const generateInvoiceToken = (invoiceId) => {
     return jwt.sign(
         { invoiceId }, 
         process.env.INVOICE_SECRET, 
-        { expiresIn: '24h' }
+        { expiresIn: '7d' }
     );
 };
 export const generateInvoice = async (req, res) => {
@@ -78,6 +78,9 @@ export const generateInvoice = async (req, res) => {
         const invoiceArray = await Invoice.create([invoiceData], { session });
         const invoice = invoiceArray[0];
 
+
+        const token = generateInvoiceToken(invoice._id);
+
         await Quotation.findByIdAndUpdate(
             quotationId, 
             { status: 'accepted' }, 
@@ -91,26 +94,31 @@ export const generateInvoice = async (req, res) => {
                 activeInvoice: {
                     invoice: invoice._id,
                     status: 'pending',
-                    createdAt: new Date()
+                    createdAt: new Date() ,
+                    link:token
                 }
             }, 
             { session }
         );
 
-        let message =  {
+        let message = {
             senderId: sellerId,
             senderModel: 'Seller',
-            content: `Invoice sent for ${validatedData.negotiatedPrice}`,
+            content: `Invoice sent for ₹${validatedData.negotiatedPrice}`,
             chat: chat._id,
             quotationId: validatedData.quotationId,
-            messageType: 'text',
-            isRead: false
-        } 
+            messageType: 'link',
+            isRead: false,
+            media: [{
+                url: token,
+                type: 'pdf',
+                name: `Invoice_${invoice._id}.pdf`,
+                size: 0
+            }]
+        };
 
 
 
-        const token = generateInvoiceToken(invoice._id);
-        const invoiceLink = `${process.env.INVOICE_FRONTEND_URL}/${token}`;
 
         await session.commitTransaction();
 
