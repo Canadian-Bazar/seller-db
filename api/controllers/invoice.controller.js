@@ -8,6 +8,9 @@ import jwt from 'jsonwebtoken';
 import Quotation from '../models/quotations.schema.js';
 import Chat from '../models/chat.schema.js';
 import Message from '../models/messages.schema.js';
+import mongoose from 'mongoose';
+import { redisClient } from '../redis/redis.config.js';
+import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 
 const generateInvoiceToken = (invoiceId) => {
     return jwt.sign(
@@ -16,47 +19,55 @@ const generateInvoiceToken = (invoiceId) => {
         { expiresIn: '24h' }
     );
 };
-
 export const generateInvoice = async (req, res) => {
+    const session = await mongoose.startSession();
+    
     try {
+        session.startTransaction();
+        
         const validatedData = matchedData(req);
         const sellerId = req.user._id;
+        const quotationId = validatedData.quotationId;
 
-        const quotation = await Quotation.findById(validatedData.quotationId);
+        const quotation = await Quotation.findById(quotationId).session(session);
         
         if (!quotation) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Quotation not found');
         }
-
-        if(quotation.status!=='negotiation'){
-            throw buildErrorObject(httpStatus.BAD_REQUEST , 'Quotation already processed')
-        }
-
+        
         if (quotation.seller.toString() !== sellerId.toString()) {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You are not authorized to create invoice for this quotation');
         }
 
-        const chat = await Chat.findOne({ quotation: validatedData.quotationId });
+        let chat = await Chat.findOne({ quotation: quotationId }).session(session);
+
         
-        if (!chat) {
-            throw buildErrorObject(httpStatus.NOT_FOUND, 'Chat not found for this quotation');
-        }
-
-        if (chat.phase !== 'negotiation') {
-            throw buildErrorObject(httpStatus.BAD_REQUEST, `Cannot create invoice. Chat is in ${chat.phase} phase`);
-        }
-
-        if (chat.activeInvoice && chat.activeInvoice.invoice) {
-            const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice);
-            if (existingInvoice && existingInvoice.status === 'pending') {
-                throw buildErrorObject(httpStatus.CONFLICT, 'There is already an active invoice for this quotation');
+        if (chat) {
+            if (chat.activeInvoice && chat.activeInvoice.invoice) {
+                const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice).session(session);
+                if (existingInvoice && existingInvoice.status === 'pending') {
+                    throw buildErrorObject(httpStatus.CONFLICT, 'There is already an active invoice for this quotation');
+                }
             }
+
+
+
+            if(chat.status !=='negotiation' || chat.status!=='invoice_rejected'){
+                throw buildErrorObject(httpStatus.BAD_REQUEST , 'Invalid chat state to raise invoice')
+            }
+        } else {
+            const chatArray = await Chat.create([{
+                quotation: quotationId,
+                seller: sellerId,
+                buyer: quotation.buyer,
+                phase: 'invoice_sent',
+                createdAt: new Date()
+            }], { session });
+            chat = chatArray[0];
         }
 
-      
-
-        const totalAmount = validatedData.negotiatedPrice + (validatedData.taxAmount || 0) + (validatedData.shippingCharges || 0);
-
+        const totalAmount = validatedData.negotiatedPrice;
+        
         const invoiceData = {
             ...validatedData,
             sellerId,
@@ -64,18 +75,29 @@ export const generateInvoice = async (req, res) => {
             totalAmount: totalAmount
         };
 
-        const invoice = await Invoice.create(invoiceData);
+        const invoiceArray = await Invoice.create([invoiceData], { session });
+        const invoice = invoiceArray[0];
 
-        await Chat.findByIdAndUpdate(chat._id, {
-            phase: 'invoice_sent',
-            activeInvoice: {
-                invoice: invoice._id,
-                status: 'pending',
-                createdAt: new Date()
-            }
-        });
+        await Quotation.findByIdAndUpdate(
+            quotationId, 
+            { status: 'accepted' }, 
+            { session }
+        );
 
-        await Message.create({
+        await Chat.findByIdAndUpdate(
+            chat._id, 
+            {
+                phase: 'invoice_sent',
+                activeInvoice: {
+                    invoice: invoice._id,
+                    status: 'pending',
+                    createdAt: new Date()
+                }
+            }, 
+            { session }
+        );
+
+        let message =  {
             senderId: sellerId,
             senderModel: 'Seller',
             content: `Invoice sent for ${validatedData.negotiatedPrice}`,
@@ -83,10 +105,17 @@ export const generateInvoice = async (req, res) => {
             quotationId: validatedData.quotationId,
             messageType: 'text',
             isRead: false
-        });
+        } 
+
+
 
         const token = generateInvoiceToken(invoice._id);
         const invoiceLink = `${process.env.INVOICE_FRONTEND_URL}/${token}`;
+
+        await session.commitTransaction();
+
+        await storeMessageInRedis(chat._id , message)
+
 
         res.status(httpStatus.CREATED).json(
             buildResponse(httpStatus.CREATED, {
@@ -97,7 +126,10 @@ export const generateInvoice = async (req, res) => {
         );
 
     } catch (err) {
+        await session.abortTransaction();
         handleError(res, err);
+    } finally {
+        session.endSession();
     }
 };
 
@@ -180,7 +212,7 @@ export const updateInvoice = async (req, res) => {
 
         // Recalculate total if needed
         if (validatedData.negotiatedPrice) {
-            validatedData.totalAmount = validatedData.negotiatedPrice + (validatedData.taxAmount || 0) + (validatedData.shippingCharges || 0);
+            validatedData.totalAmount = validatedData.negotiatedPrice 
         }
 
         const updatedInvoice = await Invoice.findByIdAndUpdate(
