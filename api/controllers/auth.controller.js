@@ -19,6 +19,7 @@ import { getSignupBody } from '../helpers/getSignupBody.js'
 import { sendTextMessage } from '../helpers/sendTextMessage.js'
 import { v4 as uuidv4 } from 'uuid';
 import SellerVerification from '../models/seller-verification.schema.js'
+import getCookieOptions from '../utils/getCookieOptions.js'
 
 /**
  * Controller: signupController
@@ -115,14 +116,8 @@ export const loginController = async (req, res) => {
     seller.role = 'seller'
     const { accessToken, refreshToken } = generateTokens(seller)
     res
-       .cookie('accessToken', accessToken, {
-        httpOnly: true,
-        secure: false,
-      })
-      .cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: false,
-      })
+       .cookie('accessToken', accessToken, getCookieOptions())
+      .cookie('refreshToken', refreshToken, getCookieOptions())
       .status(httpStatus.ACCEPTED)
       .json(buildResponse(httpStatus.ACCEPTED, seller))
 
@@ -138,14 +133,8 @@ export const loginController = async (req, res) => {
 export const logoutController = async (req, res) => {
   try {
     res
-      .clearCookie('accessToken', {
-        httpOnly: process.env.NODE_ENV === 'development',
-        secure: !process.env.NODE_ENV === 'development',
-      })
-      .clearCookie('refreshToken', {
-        httpOnly: process.env.NODE_ENV === 'development',
-        secure: !process.env.NODE_ENV === 'development',
-      })
+      .clearCookie('accessToken', getCookieOptions())
+      .clearCookie('refreshToken', getCookieOptions())
       .status(httpStatus.NO_CONTENT)
       .json(buildResponse(httpStatus.NO_CONTENT))
   } catch (err) {
@@ -212,10 +201,7 @@ export const verifyTokensController = async (req, res) => {
           const { accessToken } = generateTokens(seller)
 
           res
-            .cookie('accessToken', accessToken, {
-              httpOnly: process.env.NODE_ENV === 'development',
-              secure: !process.env.NODE_ENV === 'development',
-            })
+            .cookie('accessToken', accessToken, getCookieOptions())
             .status(httpStatus.CREATED)
             .json(buildResponse(httpStatus.CREATED, {
               success: true,
