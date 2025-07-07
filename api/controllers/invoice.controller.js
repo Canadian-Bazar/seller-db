@@ -41,7 +41,8 @@ export const generateInvoice = async (req, res) => {
 
         let chat = await Chat.findOne({ quotation: quotationId }).session(session);
 
-        
+        console.log(chat)
+
         if (chat) {
             if (chat.activeInvoice && chat.activeInvoice.invoice) {
                 const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice).session(session);
@@ -50,10 +51,9 @@ export const generateInvoice = async (req, res) => {
                 }
             }
 
-
-
-            if(chat.status !=='negotiation' || chat.status!=='invoice_rejected'){
-                throw buildErrorObject(httpStatus.BAD_REQUEST , 'Invalid chat state to raise invoice')
+            // Fixed the logical OR condition - should be AND (&&)
+            if (chat.status !== 'negotiation' && chat.status !== 'invoice_rejected') {
+                throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid chat state to raise invoice');
             }
         } else {
             const chatArray = await Chat.create([{
@@ -78,7 +78,6 @@ export const generateInvoice = async (req, res) => {
         const invoiceArray = await Invoice.create([invoiceData], { session });
         const invoice = invoiceArray[0];
 
-
         const token = generateInvoiceToken(invoice._id);
 
         await Quotation.findByIdAndUpdate(
@@ -94,8 +93,8 @@ export const generateInvoice = async (req, res) => {
                 activeInvoice: {
                     invoice: invoice._id,
                     status: 'pending',
-                    createdAt: new Date() ,
-                    link:token
+                    createdAt: new Date(),
+                    link: token
                 }
             }, 
             { session }
@@ -117,24 +116,24 @@ export const generateInvoice = async (req, res) => {
             }]
         };
 
-
-
+        // Include Redis operation in the transaction scope or handle it after commit
+        await storeMessageInRedis(chat._id, message);
 
         await session.commitTransaction();
-
-        await storeMessageInRedis(chat._id , message)
-
 
         res.status(httpStatus.CREATED).json(
             buildResponse(httpStatus.CREATED, {
                 message: 'Invoice created successfully',
                 invoiceId: invoice._id,
-                invoiceLink: invoiceLink
+                invoiceLink: token // Fixed: was using undefined 'invoiceLink'
             })
         );
 
     } catch (err) {
-        await session.abortTransaction();
+        // Only abort if transaction is still active
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         handleError(res, err);
     } finally {
         session.endSession();

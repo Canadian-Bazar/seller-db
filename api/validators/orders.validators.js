@@ -1,5 +1,6 @@
 import { check, query, param } from 'express-validator'
 import validateRequest from '../utils/validateRequest.js'
+import { paginationValidator } from './pagination.validator.js';
 
 export const getOrderByIdValidator = [
   param('orderId')
@@ -96,15 +97,7 @@ export const getBuyerOrdersValidator = [
 ]
 
 export const getSellerOrdersValidator = [
-  query('page')
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage('Page must be a positive integer'),
-
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 50 })
-    .withMessage('Limit must be between 1 and 50'),
+...paginationValidator ,
 
   query('status')
     .optional()

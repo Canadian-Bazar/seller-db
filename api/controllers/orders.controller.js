@@ -13,10 +13,10 @@ import mongoose from 'mongoose';
 
 
 
-export const geOrders = async (req, res) => {
+export const getOrders = async (req, res) => {
     try {
         const validatedData = matchedData(req);
-        const { page = 1, limit = 10, status } = validatedData;
+        const { page = 1, limit = 10, status, search } = validatedData;
         const sellerId = req.user._id;
 
         const effectiveLimit = Math.min(limit, 50);
@@ -67,7 +67,23 @@ export const geOrders = async (req, res) => {
             },
             {
                 $unwind: '$product'
-            },
+            }
+        );
+
+        // Add search filter if provided
+        if (search) {
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { orderId: { $regex: search, $options: 'i' } },
+                        { 'product.name': { $regex: search, $options: 'i' } },
+                        { 'buyer.fullName': { $regex: search, $options: 'i' } }
+                    ]
+                }
+            });
+        }
+
+        pipeline.push(
             {
                 $project: {
                     orderId: 1,
@@ -92,6 +108,7 @@ export const geOrders = async (req, res) => {
 
         const orders = await Orders.aggregate(pipeline);
 
+        // Count pipeline for pagination
         const countPipeline = [
             {
                 $lookup: {
@@ -115,24 +132,60 @@ export const geOrders = async (req, res) => {
             countPipeline.push({ $match: { status } });
         }
 
+        // Add the same lookups for search functionality in count pipeline
+        if (search) {
+            countPipeline.push(
+                {
+                    $lookup: {
+                        from: 'Buyer',
+                        localField: 'quotation.buyer',
+                        foreignField: '_id',
+                        as: 'buyer'
+                    }
+                },
+                {
+                    $unwind: '$buyer'
+                },
+                {
+                    $lookup: {
+                        from: 'Product',
+                        localField: 'quotation.productId',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                {
+                    $unwind: '$product'
+                },
+                {
+                    $match: {
+                        $or: [
+                            { orderId: { $regex: search, $options: 'i' } },
+                            { 'product.name': { $regex: search, $options: 'i' } },
+                            { 'buyer.fullName': { $regex: search, $options: 'i' } }
+                        ]
+                    }
+                }
+            );
+        }
+
         countPipeline.push({ $count: 'total' });
 
         const [countResult] = await Orders.aggregate(countPipeline);
         const total = countResult?.total || 0;
 
-
-        const response ={
-            docs:orders ,
+        const response = {
+            docs: orders,
             page: parseInt(page),
-             limit: effectiveLimit,
+            limit: effectiveLimit,
             total,
             pages: Math.ceil(total / effectiveLimit),
             hasNext: skip + effectiveLimit < total,
             hasPrev: page > 1
-        }
+        };
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK,response)
+            buildResponse(httpStatus.OK, response)
         );
 
     } catch (err) {
@@ -160,22 +213,22 @@ export const updateOrderStatus = async (req, res) => {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You do not have access to this order');
         }
 
-        const validTransitions = {
-            'pending': ['confirmed', 'cancelled'],
-            'confirmed': ['processing', 'cancelled'],
-            'processing': ['ready_to_ship', 'cancelled'],
-            'ready_to_ship': ['shipped', 'cancelled'],
-            'shipped': ['in_transit', 'delivered'],
-            'in_transit': ['out_for_delivery', 'delivered'],
-            'out_for_delivery': ['delivered', 'returned'],
-            'delivered': ['returned'],
-            'cancelled': [],
-            'returned': []
-        };
+        // const validTransitions = {
+        //     'pending': ['confirmed', 'cancelled'],
+        //     'confirmed': ['processing', 'cancelled'],
+        //     'processing': ['ready_to_ship', 'cancelled'],
+        //     'ready_to_ship': ['shipped', 'cancelled'],
+        //     'shipped': ['in_transit', 'delivered'],
+        //     'in_transit': ['out_for_delivery', 'delivered'],
+        //     'out_for_delivery': ['delivered', 'returned'],
+        //     'delivered': ['returned'],
+        //     'cancelled': [],
+        //     'returned': []
+        // };
 
-        if (!validTransitions[order.status].includes(status)) {
-            throw buildErrorObject(httpStatus.BAD_REQUEST, `Cannot change status from ${order.status} to ${status}`);
-        }
+        // if (!validTransitions[order.status].includes(status)) {
+        //     throw buildErrorObject(httpStatus.BAD_REQUEST, `Cannot change status from ${order.status} to ${status}`);
+        // }
 
         // Update order
         const updateData = { status };
@@ -259,7 +312,7 @@ export const getOrderById = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'BuyerAddress',
+                    from: 'BuyerAddresses',
                     localField: 'shippingAddress',
                     foreignField: '_id',
                     as: 'shippingAddress'
@@ -270,7 +323,7 @@ export const getOrderById = async (req, res) => {
             },
             {
                 $lookup: {
-                    from: 'BuyerAddress',
+                    from: 'BuyerAddresses',
                     localField: 'billingAddress',
                     foreignField: '_id',
                     as: 'billingAddress'
@@ -392,13 +445,13 @@ export const getOrderById = async (req, res) => {
                         status: '$chat.status'
                     },
                     
-                    // STATUS TRANSITION INFO
-                    canTransitionTo: 1  // Will be calculated below
                 }
             }
         ];
 
-        const [order] = await Orders.aggregate(pipeline);
+        const order = await Orders.aggregate(pipeline);
+
+        console.log(order)
 
         if (!order) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Order not found');
@@ -406,7 +459,6 @@ export const getOrderById = async (req, res) => {
 
         // Add valid status transitions
     
-        order.canTransitionTo = validTransitions[order.status] || [];
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, order)

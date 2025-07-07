@@ -17,6 +17,7 @@ import categoryRoutes from './category.routes.js'
 import businessTypesRoutes from './business-types.routes.js'
 import productRoutes from './product.routes.js'
 import invoiceRoutes from './invoice.routes.js'
+import orderRoutes from './orders.routes.js'
 
 const v1Routes = express.Router()
 const router = express.Router()
@@ -38,6 +39,7 @@ v1Routes.use('/category', categoryRoutes)
 v1Routes.use('/business-types', businessTypesRoutes)
 v1Routes.use('/products' , productRoutes)
 v1Routes.use('/invoice' , invoiceRoutes)
+v1Routes.use('/orders' , orderRoutes)
 
 router.use('/api/v1', v1Routes)
 
