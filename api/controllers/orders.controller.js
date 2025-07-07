@@ -449,9 +449,8 @@ export const getOrderById = async (req, res) => {
             }
         ];
 
-        const order = await Orders.aggregate(pipeline);
+        const [order] = await Orders.aggregate(pipeline);
 
-        console.log(order)
 
         if (!order) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Order not found');
