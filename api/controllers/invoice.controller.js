@@ -13,13 +13,8 @@ import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 import sendNotification from '../helpers/sendNotification.js';
 
-const generateInvoiceToken = (invoiceId) => {
-    return jwt.sign(
-        { invoiceId }, 
-        process.env.INVOICE_SECRET, 
-        { expiresIn: '7d' }
-    );
-};
+
+
 export const generateInvoice = async (req, res) => {
     const session = await mongoose.startSession();
     
@@ -30,9 +25,13 @@ export const generateInvoice = async (req, res) => {
         const sellerId = req.user._id;
         const quotationId = validatedData.quotationId;
 
-        console.log(quotationId)
+        console.log('Processing quotation:', quotationId);
 
-        const quotation = await Quotation.findById(quotationId).populate('seller').session(session);
+        // Step 1: Find quotation with minimal population to reduce lock time
+        const quotation = await Quotation.findById(quotationId)
+            .select('seller buyer status')
+            .populate('seller', 'companyName logo')
+            .session(session);
         
         if (!quotation) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Quotation not found');
@@ -42,55 +41,82 @@ export const generateInvoice = async (req, res) => {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You are not authorized to create invoice for this quotation');
         }
 
-        let chat = await Chat.findOne({ quotation: quotationId }).session(session);
+        // Step 2: Handle chat logic with optimized queries
+        let chat = await Chat.findOne({ quotation: quotationId })
+            .select('_id seller buyer quotation phase activeInvoice')
+            .session(session);
 
-        console.log(chat)
+        console.log('Found chat:', chat?._id);
 
-        console.log(chat)
-
-        if (chat) {
-            if (chat.activeInvoice && chat.activeInvoice.invoice) {
-                const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice).session(session);
-                if (existingInvoice && existingInvoice.status === 'pending') {
-                    throw buildErrorObject(httpStatus.CONFLICT, 'There is already an active invoice for this quotation');
-                }
+        // Check for existing active invoice
+        if (chat?.activeInvoice?.invoice) {
+            const existingInvoice = await Invoice.findById(chat.activeInvoice.invoice)
+                .select('status')
+                .session(session);
+            
+            if (existingInvoice && existingInvoice.status === 'pending') {
+                throw buildErrorObject(httpStatus.CONFLICT, 'There is already an active invoice for this quotation');
             }
+        }
 
-            if (chat.status === 'negotiation' ||  chat.status === 'invoice_rejected') {
-                throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid chat state to raise invoice');
-            }
-        } else {
-            const chatArray = await Chat.create([{
+        // Validate chat phase
+        if (chat && (chat.phase !== 'negotiation' && chat.phase !== 'invoice_rejected')) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid chat state to raise invoice');
+        }
+
+        // Step 3: Create chat if it doesn't exist
+        if (!chat) {
+            const newChat = new Chat({
                 quotation: quotationId,
                 seller: sellerId,
                 buyer: quotation.buyer,
                 phase: 'invoice_sent',
                 createdAt: new Date()
-            }], { session });
-            chat = chatArray[0];
+            });
+            chat = await newChat.save({ session });
         }
 
-        const totalAmount = validatedData.negotiatedPrice;
+        // Step 4: Prepare invoice data
+        const totalAmount = validatedData.negotiatedPrice + 
+                           (validatedData.taxAmount || 0) + 
+                           (validatedData.shippingCharges || 0);
         
         const invoiceData = {
-            ...validatedData,
+            quotationId,
             sellerId,
+            buyer: quotation.buyer,
             chatId: chat._id,
-            totalAmount: totalAmount
+            negotiatedPrice: validatedData.negotiatedPrice,
+            paymentTerms: validatedData.paymentTerms,
+            deliveryTerms: validatedData.deliveryTerms,
+            taxAmount: validatedData.taxAmount || 0,
+            shippingCharges: validatedData.shippingCharges || 0,
+            totalAmount: totalAmount,
+            notes: validatedData.notes,
+            status: 'pending',
+            viewedByBuyer: false,
+            expiresAt: validatedData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+            createdAt: new Date()
         };
 
-        const invoiceArray = await Invoice.create([invoiceData], { session });
-        const invoice = invoiceArray[0];
+        // Step 5: Create invoice
+        const invoice = new Invoice(invoiceData);
+        await invoice.save({ session });
 
+        // Step 6: Generate token
         const token = generateInvoiceToken(invoice._id);
 
-        await Quotation.findByIdAndUpdate(
+        // Step 7: Update quotation and chat in parallel with specific fields only
+        const quotationUpdate = Quotation.findByIdAndUpdate(
             quotationId, 
-            { status: 'accepted' }, 
-            { session }
+            { 
+                status: 'accepted',
+                updatedAt: new Date()
+            }, 
+            { session, new: false }
         );
 
-        await Chat.findByIdAndUpdate(
+        const chatUpdate = Chat.findByIdAndUpdate(
             chat._id, 
             {
                 phase: 'invoice_sent',
@@ -99,19 +125,25 @@ export const generateInvoice = async (req, res) => {
                     status: 'pending',
                     createdAt: new Date(),
                     link: token
-                }
+                },
+                updatedAt: new Date()
             }, 
-            { session }
+            { session, new: false }
         );
 
-        let message = {
+        // Execute updates in parallel
+        await Promise.all([quotationUpdate, chatUpdate]);
+
+        // Step 8: Prepare message and notification data
+        const message = {
             senderId: sellerId,
             senderModel: 'Seller',
             content: `Invoice sent for ₹${validatedData.negotiatedPrice}`,
             chat: chat._id,
-            quotationId: validatedData.quotationId,
+            quotationId: quotationId,
             messageType: 'link',
             isRead: false,
+            createdAt: new Date(),
             media: [{
                 url: token,
                 type: 'pdf',
@@ -120,7 +152,7 @@ export const generateInvoice = async (req, res) => {
             }]
         };
 
-         const notificationData = {
+        const notificationData = {
             recipient: quotation.buyer,
             sender: {
                 model: 'Seller',
@@ -140,8 +172,10 @@ export const generateInvoice = async (req, res) => {
             }
         };
 
+        // Commit transaction before external operations
         await session.commitTransaction();
 
+        // Step 9: Handle external operations (Redis and notifications) after transaction
         try {
             await storeMessageInRedis(chat._id, message);
         } catch (redisError) {
@@ -154,25 +188,39 @@ export const generateInvoice = async (req, res) => {
             console.error('Notification error (non-blocking):', notificationError);
         }
 
-
-
         res.status(httpStatus.CREATED).json(
             buildResponse(httpStatus.CREATED, {
                 message: 'Invoice created successfully',
                 invoiceId: invoice._id,
-                invoiceLink: token
+                invoiceLink: token,
+                totalAmount: totalAmount
             })
         );
 
     } catch (err) {
-        // Only abort if transaction is still active
+        // Handle transaction rollback
         if (session.inTransaction()) {
-            await session.abortTransaction();
+            try {
+                await session.abortTransaction();
+            } catch (abortError) {
+                console.error('Error aborting transaction:', abortError);
+            }
         }
+        
+        console.error('Invoice generation error:', err);
         handleError(res, err);
     } finally {
-        session.endSession();
+        await session.endSession();
     }
+};
+
+// Helper function to generate invoice token (if not already defined)
+const generateInvoiceToken = (invoiceId) => {
+    return jwt.sign(
+        { invoiceId },
+        process.env.INVOICE_SECRET,
+        { expiresIn: '30d' }
+    );
 };
 
 export const getSellerInvoices = async (req, res) => {
@@ -303,6 +351,74 @@ export const deleteInvoice = async (req, res) => {
         );
 
     } catch (err) {
+        handleError(res, err);
+    }
+};
+
+
+
+export const getInvoiceDetails = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { invoiceToken } = validatedData;
+
+        let decoded = jwt.verify(invoiceToken, process.env.INVOICE_SECRET);
+        const invoiceId = decoded.invoiceId;
+
+        const invoiceDetails = await Invoice.findById(invoiceId)
+            .populate({
+                path: 'quotationId',
+                populate: [
+                    {
+                        path: 'productId',
+                        select: 'name images category description'
+                    },
+                    {
+                        path: 'buyer',
+                        select: 'fullName profilePic email phoneNumber city state'
+                    }
+                ]
+            })
+            .populate('sellerId', 'companyName email profileImage phone city state');
+
+        if (!invoiceDetails) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Invoice not found');
+        }
+
+        if (invoiceDetails.expiresAt < new Date()) {
+            throw buildErrorObject(httpStatus.GONE, 'Invoice has expired');
+        }
+
+        // Update viewing status if not already viewed
+        if (!invoiceDetails.viewedByBuyer) {
+            await Invoice.findByIdAndUpdate(invoiceId, {
+                viewedByBuyer: true,
+                viewedAt: new Date()
+            });
+            
+            // Update the local object to reflect the change
+            invoiceDetails.viewedByBuyer = true;
+            invoiceDetails.viewedAt = new Date();
+        }
+
+        // Structure the response to match the expected format in the React component
+        const response = {
+            data: {
+                response: invoiceDetails
+            }
+        };
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, response.data.response)
+        );
+
+    } catch (err) {
+        if (err.name === 'JsonWebTokenError') {
+            return handleError(res, buildErrorObject(httpStatus.UNAUTHORIZED, 'Invalid invoice token'));
+        }
+        if (err.name === 'TokenExpiredError') {
+            return handleError(res, buildErrorObject(httpStatus.UNAUTHORIZED, 'Invoice token has expired'));
+        }
         handleError(res, err);
     }
 };

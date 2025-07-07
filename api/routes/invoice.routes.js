@@ -14,6 +14,14 @@ router.use(trimRequest.all)
 router.use(requireAuth)
 
 // Generate invoice (seller)
+
+router.post(
+  '/' ,
+  invoiceValidators.getInvoiceDetailsValidator ,
+  invoiceControllers.getInvoiceDetails
+)
+
+
 router.post(
   '/generate',
   invoiceValidators.generateInvoiceValidator,
