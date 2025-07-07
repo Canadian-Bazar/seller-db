@@ -31,7 +31,7 @@ const MessageSchema = new mongoose.Schema({
     
     messageType: {
         type: String,
-        enum: ['text', 'quotation_created', 'quotation_accepted', 'quotation_rejected' , 'image' , 'link'],
+        enum: ['text', 'quotation_created', 'quotation_accepted', 'quotation_rejected' , 'image' , 'link' ],
         default: 'text'
     },
     

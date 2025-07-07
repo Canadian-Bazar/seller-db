@@ -11,6 +11,7 @@ import Message from '../models/messages.schema.js';
 import mongoose from 'mongoose';
 import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
+import sendNotification from '../helpers/sendNotification.js';
 
 const generateInvoiceToken = (invoiceId) => {
     return jwt.sign(
@@ -29,17 +30,21 @@ export const generateInvoice = async (req, res) => {
         const sellerId = req.user._id;
         const quotationId = validatedData.quotationId;
 
-        const quotation = await Quotation.findById(quotationId).session(session);
+        console.log(quotationId)
+
+        const quotation = await Quotation.findById(quotationId).populate('seller').session(session);
         
         if (!quotation) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Quotation not found');
         }
         
-        if (quotation.seller.toString() !== sellerId.toString()) {
+        if (quotation.seller._id.toString() !== sellerId.toString()) {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You are not authorized to create invoice for this quotation');
         }
 
         let chat = await Chat.findOne({ quotation: quotationId }).session(session);
+
+        console.log(chat)
 
         console.log(chat)
 
@@ -51,8 +56,7 @@ export const generateInvoice = async (req, res) => {
                 }
             }
 
-            // Fixed the logical OR condition - should be AND (&&)
-            if (chat.status !== 'negotiation' && chat.status !== 'invoice_rejected') {
+            if (chat.status === 'negotiation' ||  chat.status === 'invoice_rejected') {
                 throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid chat state to raise invoice');
             }
         } else {
@@ -116,16 +120,47 @@ export const generateInvoice = async (req, res) => {
             }]
         };
 
-        // Include Redis operation in the transaction scope or handle it after commit
-        await storeMessageInRedis(chat._id, message);
+         const notificationData = {
+            recipient: quotation.buyer,
+            sender: {
+                model: 'Seller',
+                id: sellerId,
+                name: quotation.seller.companyName,
+                image: quotation.seller.logo || null
+            },
+            type: 'invoice_created',
+            title: 'Invoice Received',
+            message: `${quotation.seller.companyName} has sent you an invoice of ₹${validatedData.negotiatedPrice}`,
+            data: {
+                invoiceId: invoice._id,
+                chatId: chat._id,
+                quotationId: quotationId,
+                amount: validatedData.negotiatedPrice,
+                invoiceLink: token
+            }
+        };
 
         await session.commitTransaction();
+
+        try {
+            await storeMessageInRedis(chat._id, messageForRedis);
+        } catch (redisError) {
+            console.error('Redis error (non-blocking):', redisError);
+        }
+
+        try {
+            await sendNotification(notificationData);
+        } catch (notificationError) {
+            console.error('Notification error (non-blocking):', notificationError);
+        }
+
+
 
         res.status(httpStatus.CREATED).json(
             buildResponse(httpStatus.CREATED, {
                 message: 'Invoice created successfully',
                 invoiceId: invoice._id,
-                invoiceLink: token // Fixed: was using undefined 'invoiceLink'
+                invoiceLink: token
             })
         );
 

@@ -211,11 +211,12 @@ export const getAllQuotationsController = async (req, res) => {
 };
 
 export const acceptQuotationController = async (req, res) => {
+    const validatedData = matchedData(req)
     const session = await mongoose.startSession();
     
     try {
         await session.withTransaction(async () => {
-            const { quotationId } = req.params;
+            const { quotationId } = validatedData;
 
             const quotation = await Quotation.findOne({ 
                 _id: quotationId, 
@@ -229,7 +230,6 @@ export const acceptQuotationController = async (req, res) => {
 
             const previousStatus = quotation.status;
             
-            // Update quotation status
             quotation.status = 'accepted';
             await quotation.save({ session });
 
@@ -422,7 +422,7 @@ export const rejectQuotationController = async (req, res) => {
     
     try {
         await session.withTransaction(async () => {
-            const { quotationId } = req.params;
+            const { quotationId } = validatedData;
 
             const quotation = await Quotation.findOne({ 
                 _id: quotationId, 
@@ -475,108 +475,145 @@ export const negotiateQuotationController = async (req, res) => {
     const session = await mongoose.startSession();
     
     try {
-        await session.withTransaction(async () => {
-            const { quotationId } = req.params;
+        session.startTransaction();
 
-            const quotation = await Quotation.findOne({ 
-                _id: quotationId, 
-                status: { $in: ['pending', 'negotiation'] }, 
-                seller: req.user._id 
-            }).populate('seller').session(session);
-            
-            if (!quotation) {
-                throw buildErrorObject(httpStatus.BAD_REQUEST, 'Quotation not found or already processed');
-            }
+        const validatedData = matchedData(req);
+        const { quotationId } = validatedData;
 
-            const previousStatus = quotation.status;
-            
-            // Update quotation status to negotiation
-            quotation.status = 'negotiation';
-            await quotation.save({ session });
 
-            const buyer = quotation.buyer;
-            const seller = quotation.seller._id;
+        const sellerId = req.user._id;
 
-            // Create chat only if it's first time negotiation
-            let existingChat = await Chat.findOne({ quotation: quotationId }).session(session);
+        console.log(quotationId)
 
-            if (!existingChat) {
-                // Create new chat
-                existingChat = await Chat.create([{ 
-                    buyer, 
-                    seller,
-                    quotation: quotationId,
-                    phase: 'negotiation',
-                    status: 'active',
-                    unreadBy: 'buyer'
-                }], { session });
-                
-                existingChat = existingChat[0]; // Extract from array
-                console.log("✅ New chat created:", existingChat._id);
+        const quotation = await Quotation.findOne({ 
+            _id: quotationId, 
+            status: { $in: ['pending'] }, 
+            seller: sellerId 
+        }).populate('seller').session(session);
 
-                // Create system message
-                await Message.create([{
-                    senderId: seller,
-                    senderModel: 'Seller',
-                    content: 'New Quotation Created',
-                    chat: existingChat._id,
-                    quotationId: quotation._id,
-                    messageType: 'quotation_created',
-                    isRead: false
-                }], { session });
-            } else {
-                // Update existing chat phase if needed
-                if (existingChat.phase === 'invoice_rejected') {
-                    existingChat.phase = 'negotiation';
-                    await existingChat.save({ session });
-                }
-            }
+        console.log(quotation)
+        
+        if (!quotation) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Quotation not found or already processed');
+        }
 
-            // Create negotiation message
-            const newMessage = await Message.create([{
-                senderId: seller,
-                senderModel: 'Seller',
-                content: "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.",
-                chat: existingChat._id,
-                quotationId: quotation._id,
-                messageType: 'text',
-                isRead: false
+        const buyerId = quotation.buyer;
+
+        await Quotation.findByIdAndUpdate(
+            quotationId,
+            { status: 'negotiation' },
+            { session }
+        );
+
+        // Check for existing chat
+        let chat = await Chat.findOne({ quotation: quotationId }).session(session);
+
+        if (!chat) {
+            const chatArray = await Chat.create([{ 
+                buyer: buyerId, 
+                seller: sellerId,
+                quotation: quotationId,
+                phase: 'negotiation',
+                status: 'active',
+                unreadBy: 'buyer'
             }], { session });
+            
+            chat = chatArray[0];
+            console.log("✅ New chat created:", chat._id);
 
-            // Update chat with last message
-            existingChat.lastMessage = newMessage[0]._id;
-            existingChat.unreadBy = 'buyer';
-            await existingChat.save({ session });
+            // const systemMessageArray = await Message.create([{
+            //     senderId: sellerId,
+            //     senderModel: 'Seller',
+            //     content: 'New Quotation Created',
+            //     chat: chat._id,
+            //     quotationId: quotation._id,
+            //     messageType: 'quotation_created',
+            //     isRead: false
+            // }], { session });
 
-            // Store data for notification and response
-            req.notificationData = {
-                recipient: buyer,
-                sender: {
-                    model: 'Seller',
-                    id: seller,
-                    name: quotation.seller.companyName,
-                    image: quotation.seller.profileImage || null
-                },
-                type: 'quote_negotiation',
-                message: notificationMessages.buyer.quotationNegotiation || 'Seller wants to negotiate your quotation'
-            };
+        } else {
+            if (chat.phase === 'invoice_rejected') {
+                await Chat.findByIdAndUpdate(
+                    chat._id,
+                    { phase: 'negotiation' },
+                    { session }
+                );
+            }
+        }
 
-            req.responseData = {
-                message: 'Negotiation started successfully',
-                chatId: existingChat._id
-            };
-        });
+        const negotiationMessageArray = await Message.create([{
+            senderId: sellerId,
+            senderModel: 'Seller',
+            content: "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.",
+            chat: chat._id,
+            quotationId: quotation._id,
+            messageType: 'text',
+            isRead: false
+        }], { session });
 
-        // Send notification after transaction completes
-        if (req.notificationData) {
-            await sendNotification(req.notificationData);
+        const negotiationMessage = negotiationMessageArray[0];
+
+        await Chat.findByIdAndUpdate(
+            chat._id,
+            { 
+                lastMessage: negotiationMessage._id,
+                unreadBy: 'buyer' 
+            },
+            { session }
+        );
+
+        // Prepare message for Redis (after transaction commits)
+        // const messageForRedis = {
+        //     senderId: sellerId,
+        //     senderModel: 'Seller',
+        //     content: "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.",
+        //     chat: chat._id,
+        //     quotationId: quotation._id,
+        //     messageType: 'text',
+        //     isRead: false,
+        //     _id: negotiationMessage._id,
+        //     createdAt: negotiationMessage.createdAt
+        // };
+
+       
+        await session.commitTransaction();
+
+         const notificationData = {
+            recipient: quotation.buyer,
+            sender: {
+                model: 'Seller',
+                id: sellerId,
+                name: quotation.seller.companyName,
+                image: quotation.seller.logo || null
+            },
+            type: 'negotiation',
+            title: 'Quotation moved to negotiation state',
+            message: `${quotation.seller.companyName} wants to negotiate with you about your recent quotation`,
+            data: {
+                chatId: chat._id,
+                quotationId: quotationId,
+                
+            }
+        };
+
+        try {
+            await sendNotification(notificationData);
+        } catch (notificationError) {
+            console.error('Notification error (non-blocking):', notificationError);
         }
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, req.responseData)
+            buildResponse(httpStatus.OK, {
+                message: 'Negotiation started successfully',
+                chatId: chat._id
+            })
         );
 
     } catch (err) {
+        // Only abort if transaction is still active
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
         handleError(res, err);
     } finally {
         await session.endSession();

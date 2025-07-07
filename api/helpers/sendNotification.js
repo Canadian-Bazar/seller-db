@@ -1,23 +1,15 @@
 import BuyerNotifications from '../models/buyer-notifications.schema.js';
 
-
-
-
-
-const sendNotification = (data) => {
-  return new Promise((resolve, reject) => {
-    resolve()
-    ;(async () => {
-      try {
-        const notification = new BuyerNotifications(data)
-        await notification.save()
-        console.log('Notification sent successfully')
-      } catch (err) {
-        reject(err)
-      }
-    })()
-  })
+const sendNotification = async (data) => {
+  try {
+    const notification = new BuyerNotifications(data)
+    console.log(notification)
+    await notification.save()
+    console.log('Notification sent successfully')
+  } catch (err) {
+    console.error('Error sending notification:', err)
+    throw err 
+  }
 }
-
 
 export default sendNotification
