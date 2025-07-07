@@ -143,7 +143,7 @@ export const generateInvoice = async (req, res) => {
         await session.commitTransaction();
 
         try {
-            await storeMessageInRedis(chat._id, messageForRedis);
+            await storeMessageInRedis(chat._id, message);
         } catch (redisError) {
             console.error('Redis error (non-blocking):', redisError);
         }
