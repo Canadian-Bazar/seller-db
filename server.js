@@ -53,7 +53,7 @@ init().then((dbStatus) => {
       allowedHeaders: 'Content-Type',
       credentials: true,
       methods: 'POST, GET, PATCH, PUT, DELETE, HEAD, OPTIONS',
-      origin: [process.env.FRONTEND_URL , 'http://localhost:5174']
+      origin: [process.env.FRONTEND_URL , 'http://localhost:5174' , 'https://seller-canadian-bazar.duckdns.org']
     }),
   )
 
