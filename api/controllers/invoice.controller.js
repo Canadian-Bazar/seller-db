@@ -138,7 +138,7 @@ export const generateInvoice = async (req, res) => {
         const message = {
             senderId: sellerId,
             senderModel: 'Seller',
-            content: `Invoice sent for ₹${validatedData.negotiatedPrice}`,
+            content: `Invoice sent for price ${validatedData.negotiatedPrice}`,
             chat: chat._id,
             quotationId: quotationId,
             messageType: 'link',
