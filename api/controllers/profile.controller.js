@@ -13,7 +13,7 @@ import { uploadFile } from '../helpers/aws-s3.js'
 
 export const getProfile = async (req, res) => {
   try {
-    const sellerId = req.seller._id
+    const sellerId = req.user._id
     const seller = await Seller.findById(sellerId)
       .populate('businessType', 'name')
       .populate('categories', 'name')
