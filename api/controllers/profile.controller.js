@@ -6,6 +6,11 @@ import validateRequest from '../utils/validateRequest.js'
 import buildErrorObject from '../utils/buildErrorObject.js'
 import buildResponse from '../utils/buildResponse.js'
 import { uploadFile } from '../helpers/aws-s3.js'
+import { v4 as uuidv4 } from 'uuid'
+import SellerContactChange from '../models/seller-contact-change.schema.js'
+import sendMail from '../helpers/sendMail.js'
+import { sendTextMessage } from '../helpers/sendTextMessage.js'
+import otpGenerator from 'otp-generator'
 
 
 
@@ -132,3 +137,8 @@ export const updateProfile = async (req, res) => {
     handleError(res, error);
   }
 };
+
+
+
+
+

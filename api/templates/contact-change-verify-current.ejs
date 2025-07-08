@@ -1,0 +1,206 @@
+<!-- contact-change-verify-current.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Current Contact - Contact Change Request</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 40px;
+        }
+        .otp-container {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .otp {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            letter-spacing: 8px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Contact Change Verification</h1>
+            <p>Verify your current <%= changeType %></p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello <%= companyName %>,</h2>
+            
+            <p>We received a request to change your <%= changeType %> to <strong><%= newContact %></strong>.</p>
+            
+            <p>To proceed with this change, please verify your current <%= changeType %> by entering the OTP below:</p>
+            
+            <div class="otp-container">
+                <p style="margin: 0; font-size: 18px; color: #666;">Your verification code is:</p>
+                <div class="otp"><%= otp %></div>
+                <p style="margin: 0; font-size: 14px; color: #666;">This code expires in 10 minutes</p>
+            </div>
+            
+            <div class="warning">
+                <strong>⚠️ Security Notice:</strong><br>
+                If you didn't request this change, please ignore this email and contact our support team immediately.
+            </div>
+            
+            <p><strong>What happens next?</strong></p>
+            <ol>
+                <li>Enter this OTP to verify your current <%= changeType %></li>
+                <li>We'll send another OTP to your new <%= changeType %></li>
+                <li>Verify the new OTP to complete the change</li>
+            </ol>
+            
+            <p>For security reasons, this verification process must be completed within 1 hour.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+
+<!-- contact-change-verify-new.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify New Contact - Contact Change Request</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 40px;
+        }
+        .otp-container {
+            background: #f8f9fa;
+            border: 2px dashed #28a745;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .otp {
+            font-size: 36px;
+            font-weight: bold;
+            color: #28a745;
+            letter-spacing: 8px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #155724;
+        }
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Final Verification Step</h1>
+            <p>Verify your new <%= changeType %></p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello <%= companyName %>,</h2>
+            
+            <div class="success">
+                <strong>✅ Step 1 Complete:</strong> Your current <%= changeType %> has been verified successfully!
+            </div>
+            
+            <p>Now, please verify your new <%= changeType %> by entering the OTP below:</p>
+            
+            <div class="otp-container">
+                <p style="margin: 0; font-size: 18px; color: #666;">Your verification code is:</p>
+                <div class="otp"><%= otp %></div>
+                <p style="margin: 0; font-size: 14px; color: #666;">This code expires in 10 minutes</p>
+            </div>
+            
+            <p><strong>🎉 You're almost done!</strong></p>
+            <p>Once you verify this OTP, your <%= changeType %> change will be complete and you'll be able to use your new <%= changeType %> for future logins.</p>
+            
+            <p>For security reasons, this verification code will expire in 10 minutes.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message. Please do not reply to this email.</p>
+            <p>&copy; 2025 Your Company Name. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
