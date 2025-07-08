@@ -22,6 +22,7 @@ export const createProductController = async (req, res) => {
             name, 
             categoryId, 
             about, 
+            moq ,
         } = validatedData;
 
 
@@ -45,7 +46,6 @@ export const createProductController = async (req, res) => {
 
 
 
-        //need to add condition that only after seller has completed his profile then only he should be able to create product
         
 
         const newProduct = new Products({
@@ -60,6 +60,7 @@ export const createProductController = async (req, res) => {
             maxPrice: 0,
             deliveryDays: 1,
             isCustomizable: false,
+            moq :moq ,
             
             // Initialize completion tracking
             isComplete: false,

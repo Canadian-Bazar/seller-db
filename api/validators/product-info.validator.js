@@ -51,6 +51,16 @@ export const validateUpdateProduct = [
         return true;
     }),
 
+      check('moq')
+        .optional()
+        .isInt({ min: 1 }).withMessage('Minimum order quantity must be a number greater than or equal to 1') ,
+
+  
+
+
+
+
+
     (req, res, next) => validateRequest(req, res, next)
 ];
 
@@ -110,6 +120,11 @@ export const validateCreateProduct = [
         }
         return true;
     }) ,
+
+      check('moq')
+        .exists().withMessage('Minimum order quantity is required')
+        .bail() // stop if previous validator failed
+        .isInt({ min: 1 }).withMessage('Minimum order quantity must be a number greater than or equal to 1') ,
     
 
     (req, res, next) => validateRequest(req, res, next)

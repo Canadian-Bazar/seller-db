@@ -162,7 +162,7 @@ export const generateInvoice = async (req, res) => {
             },
             type: 'invoice_created',
             title: 'Invoice Received',
-            message: `${quotation.seller.companyName} has sent you an invoice of ₹${validatedData.negotiatedPrice}`,
+            message: `${quotation.seller.companyName} has sent you an invoice of CAD ${validatedData.negotiatedPrice}`,
             data: {
                 invoiceId: invoice._id,
                 chatId: chat._id,
@@ -375,11 +375,11 @@ export const getInvoiceDetails = async (req, res) => {
                     },
                     {
                         path: 'buyer',
-                        select: 'fullName profilePic email phoneNumber city state'
+                        select: 'fullName profilePic email phoneNumber city state avatar'
                     }
                 ]
             })
-            .populate('sellerId', 'companyName email profileImage phone city state');
+            .populate('sellerId', 'companyName email logo phone city state');
 
         if (!invoiceDetails) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Invoice not found');

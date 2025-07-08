@@ -14,7 +14,7 @@ export const syncProductPricingController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
         const { productId } = req.params;
-        const { basePrice, quantityPriceTiers, leadTime } = validatedData;
+        const { basePrice, quantityPriceTiers, leadTime  , minPrice , maxPrice } = validatedData;
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {
@@ -39,6 +39,15 @@ export const syncProductPricingController = async (req, res) => {
                 upsert: true, 
                 new: true, 
                 runValidators: true 
+            }
+        );
+
+
+        await Products.findByIdAndUpdate(
+            productId,
+            {
+                minPrice: minPrice || 0,
+                maxPrice: maxPrice || 0
             }
         );
 
@@ -69,10 +78,16 @@ export const getProductPricingController = async (req, res) => {
         }
 
         const pricing = await ProductPricing.findOne({ productId: productId });
+        const product = await Products.findById(productId).select('minPrice maxPrice');
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK,  pricing)
+            buildResponse(httpStatus.OK, {
+                ...pricing?.toObject(),
+                minPrice: product?.minPrice || 0,
+                maxPrice: product?.maxPrice || 0
+            })
         );
+
 
     } catch (err) {
         handleError(res, err);

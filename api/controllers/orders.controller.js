@@ -95,6 +95,7 @@ export const getOrders = async (req, res) => {
                     deliveredAt: 1,
                     createdAt: 1,
                     'buyer.fullName': 1,
+                    'buyer.avatar':1 ,
                     'buyer.profilePic': 1,
                     'product.name': 1,
                     'product.images': 1,
@@ -385,6 +386,7 @@ export const getOrderById = async (req, res) => {
                         email: '$buyer.email',
                         phone: '$buyer.phone',
                         profilePic: '$buyer.profilePic',
+                        avatar:'$buyer.avatar' ,
                         companyName: '$buyer.companyName'
                     },
                     
