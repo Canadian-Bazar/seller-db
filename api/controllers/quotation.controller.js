@@ -642,7 +642,7 @@ export const getQuotationById = async (req, res) => {
                 // Lookup product details
                 {
                     $lookup: {
-                        from: 'Products',
+                        from: 'Product',
                         localField: 'productId',
                         foreignField: '_id',
                         as: 'productDetails'
