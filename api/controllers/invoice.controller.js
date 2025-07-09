@@ -7,7 +7,6 @@ import httpStatus from 'http-status';
 import jwt from 'jsonwebtoken';
 import Quotation from '../models/quotations.schema.js';
 import Chat from '../models/chat.schema.js';
-import Message from '../models/messages.schema.js';
 import mongoose from 'mongoose';
 import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
@@ -134,7 +133,6 @@ export const generateInvoice = async (req, res) => {
         // Execute updates in parallel
         await Promise.all([quotationUpdate, chatUpdate]);
 
-        // Step 8: Prepare message and notification data
         const message = {
             senderId: sellerId,
             senderModel: 'Seller',
@@ -214,7 +212,6 @@ export const generateInvoice = async (req, res) => {
     }
 };
 
-// Helper function to generate invoice token (if not already defined)
 const generateInvoiceToken = (invoiceId) => {
     return jwt.sign(
         { invoiceId },

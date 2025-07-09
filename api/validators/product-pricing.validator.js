@@ -7,11 +7,7 @@ export const validateSyncProductPricing = [
         .isMongoId()
         .withMessage('Product ID should be a mongoose ID'),
 
-    check('basePrice')
-        .exists({ checkFalsy: true })
-        .withMessage('Base price is required')
-        .isFloat({ min: 1 })
-        .withMessage('Base price must be a number greater than 0'),
+    
 
     check('quantityPriceTiers')
         .exists({ checkFalsy: true })

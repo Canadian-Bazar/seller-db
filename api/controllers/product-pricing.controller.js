@@ -14,7 +14,7 @@ export const syncProductPricingController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
         const { productId } = req.params;
-        const { basePrice, quantityPriceTiers, leadTime  , minPrice , maxPrice } = validatedData;
+        const {  quantityPriceTiers, leadTime  , minPrice , maxPrice } = validatedData;
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {
@@ -31,7 +31,6 @@ export const syncProductPricingController = async (req, res) => {
             { productId: productId },
             {
                 productId: productId,
-                basePrice: basePrice,
                 quantityPriceTiers: quantityPriceTiers || [],
                 leadTime: leadTime || []
             },

@@ -72,6 +72,10 @@ export const loginController = async (req, res) => {
       ]
     }).select('password loginAttempts blockExpires approvalStatus')
 
+
+
+    console.log(seller)
+     console.log(req)
     console.log(seller)
 
     if (!seller?._id) {
