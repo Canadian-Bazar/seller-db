@@ -107,7 +107,7 @@ export const getProductsController = async (req, res) => {
         name: 1,
         isVerified: 1,
         avgRating: 1,
-        images: { $slice: ['$images', 2] }, // first 2 images only
+        images: 1,
         minPrice: 1,
         maxPrice: 1,
         deliveryDays: 1,
