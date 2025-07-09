@@ -4,12 +4,7 @@ import moment from 'moment';
 
 
 const getWeeklySalesData = async (productIds, fromDate, toDate, type = 'salesCount') => {
-  console.log('📅 Getting weekly sales data:', { 
-    productIds, 
-    fromDate: fromDate.format(), 
-    toDate: toDate.format(), 
-    type 
-  });
+
 
   // Validate type parameter
   const validTypes = ['salesCount', 'salesAmount', 'profit'];
@@ -68,7 +63,6 @@ const getWeeklySalesData = async (productIds, fromDate, toDate, type = 'salesCou
     y.push(totalValue);
   }
 
-  console.log(`📊 Weekly ${type} result:`, { x, y });
   return { x, y };
 };
 

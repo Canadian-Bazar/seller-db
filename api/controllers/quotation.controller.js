@@ -319,26 +319,26 @@ export const acceptQuotationController = async (req, res) => {
                 }, { session });
 
                 // Fetch buyer's default addresses
-                const [billingAddress, shippingAddress] = await Promise.all([
-                    BuyerAddress.findOne({ 
-                        buyerId: buyer, 
-                        addressType: 'Billing', 
-                        isDefault: true 
-                    }).session(session),
-                    BuyerAddress.findOne({ 
-                        buyerId: buyer, 
-                        addressType: 'Shipping', 
-                        isDefault: true 
-                    }).session(session)
-                ]);
+                // const [billingAddress, shippingAddress] = await Promise.all([
+                //     BuyerAddress.findOne({ 
+                //         buyerId: buyer, 
+                //         addressType: 'Billing', 
+                //         isDefault: true 
+                //     }).session(session),
+                //     BuyerAddress.findOne({ 
+                //         buyerId: buyer, 
+                //         addressType: 'Shipping', 
+                //         isDefault: true 
+                //     }).session(session)
+                // ]);
 
-                if (!billingAddress) {
-                    throw buildErrorObject(httpStatus.BAD_REQUEST, 'Buyer must have a default billing address');
-                }
+                // if (!billingAddress) {
+                //     throw buildErrorObject(httpStatus.BAD_REQUEST, 'Buyer must have a default billing address');
+                // }
 
-                if (!shippingAddress) {
-                    throw buildErrorObject(httpStatus.BAD_REQUEST, 'Buyer must have a default shipping address');
-                }
+                // if (!shippingAddress) {
+                //     throw buildErrorObject(httpStatus.BAD_REQUEST, 'Buyer must have a default shipping address');
+                // }
 
                 // Create order
                 const orderData = {

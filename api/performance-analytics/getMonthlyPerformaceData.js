@@ -3,12 +3,7 @@ import moment from 'moment';
 
 
 export const getMonthlyPerformanceData = async (productIds, fromDate, toDate, type = 'viewCount') => {
-  console.log('📅 Getting monthly performance data:', { 
-    productIds, 
-    fromDate: fromDate.format(), 
-    toDate: toDate.format(), 
-    type 
-  });
+ 
 
   // Validate type parameter
   const validTypes = ['viewCount', 'quotationsSent', 'quotationsAccepted', 'quotationsRejected', 'quotationsInProgress', 'popularityScore', 'bestsellerScore'];
@@ -49,8 +44,7 @@ export const getMonthlyPerformanceData = async (productIds, fromDate, toDate, ty
     const relevantDocs = yearlyDocs.filter(doc => doc.year === monthInfo.year);
 
     for (const doc of relevantDocs) {
-      console.log(`Processing doc for year ${doc.year}, looking for month ${monthInfo.month}`);
-      console.log(`Monthly Metrics:`, JSON.stringify(doc.monthlyMetrics, null, 2));
+      
       
       // Find the month data (handle both correct and nested structures)
       let monthMetric = null;
@@ -89,20 +83,16 @@ export const getMonthlyPerformanceData = async (productIds, fromDate, toDate, ty
         }
       }
       
-      console.log(`Found month metric:`, monthMetric);
       
       if (monthMetric && monthMetric[type] !== undefined) {
         totalValue += monthMetric[type] || 0; // Use dynamic type
-        console.log(`Added ${monthMetric[type]} ${type}, total now: ${totalValue}`);
       }
     }
 
     x.push(monthInfo.label);
     y.push(totalValue);
-    console.log(`Month ${monthInfo.label}: ${totalValue} total ${type}`);
   }
 
-  console.log(`📊 Monthly ${type} result:`, { x, y });
   return { x, y };
 };
 
