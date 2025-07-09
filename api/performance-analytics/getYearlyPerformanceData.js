@@ -3,12 +3,7 @@ import moment from 'moment';
 
 
 export const getYearlyPerformanceData = async (productIds, fromDate, toDate, type = 'viewCount') => {
-  console.log('📅 Getting yearly performance data:', { 
-    productIds, 
-    fromDate: fromDate.format(), 
-    toDate: toDate.format(), 
-    type 
-  });
+ 
 
   // Validate type parameter
   const validTypes = ['viewCount', 'quotationsSent', 'quotationsAccepted', 'quotationsRejected', 'quotationsInProgress', 'popularityScore', 'bestsellerScore'];
@@ -48,7 +43,6 @@ export const getYearlyPerformanceData = async (productIds, fromDate, toDate, typ
     y.push(totalValue);
   }
 
-  console.log(`📊 Yearly ${type} result:`, { x, y });
   return { x, y };
 };
 

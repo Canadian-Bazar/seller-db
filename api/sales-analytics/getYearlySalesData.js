@@ -4,12 +4,7 @@ import moment from 'moment';
 
 
 const getYearlySalesData = async (productIds, fromDate, toDate, type = 'salesCount') => {
-  console.log('📅 Getting yearly sales data:', { 
-    productIds, 
-    fromDate: fromDate.format(), 
-    toDate: toDate.format(), 
-    type 
-  });
+
 
   // Validate type parameter
   const validTypes = ['salesCount', 'salesAmount', 'profit'];
@@ -49,7 +44,6 @@ const getYearlySalesData = async (productIds, fromDate, toDate, type = 'salesCou
     y.push(totalValue);
   }
 
-  console.log(`📊 Yearly ${type} result:`, { x, y });
   return { x, y };
 };
 

@@ -3,12 +3,6 @@ import moment from 'moment';
 
 
 const getDailySalesData = async (productIds, fromDate, toDate, type = 'salesCount') => {
-  console.log('📅 Getting daily sales data:', { 
-    productIds, 
-    fromDate: fromDate.format(), 
-    toDate: toDate.format(), 
-    type 
-  });
 
   // Validate type parameter
   const validTypes = ['salesCount', 'salesAmount', 'profit'];
@@ -70,7 +64,6 @@ const getDailySalesData = async (productIds, fromDate, toDate, type = 'salesCoun
     y.push(totalValue);
   }
 
-  console.log(`📊 Daily ${type} result:`, { x, y });
   return { x, y };
 };
 
