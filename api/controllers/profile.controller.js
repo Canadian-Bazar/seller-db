@@ -20,6 +20,8 @@ export const getProfile = async (req, res) => {
   try {
     const sellerId = req.user._id
     const seller = await Seller.findById(sellerId)
+      .populate('categories')
+
       .select('-password -__v')
 
     if (!seller) {

@@ -1,10 +1,9 @@
-import { check , body } from 'express-validator'
+import { check, body } from 'express-validator';
+import validateRequest from '../utils/validateRequest.js';
+import buildErrorObject from '../utils/buildErrorObject.js';
+import httpStatus from 'http-status';
 
-import validateRequest from '../utils/validateRequest.js'
-import buildErrorObject from '../utils/buildErrorObject.js'
-import httpStatus from 'http-status'
-
-export const signupValidator = [ 
+export const signupValidator = [
   check('fullName')
     .exists()
     .withMessage('Full Name Is Required')
@@ -28,7 +27,7 @@ export const signupValidator = [
     .withMessage('Phone Number is Required')
     .not()
     .isEmpty()
-    .withMessage('Phone Number Be Empty') 
+    .withMessage('Phone Number Be Empty')
     .isMobilePhone()
     .withMessage('Phone Number is Invalid'),
 
@@ -39,7 +38,7 @@ export const signupValidator = [
     ),
 
   (req, res, next) => validateRequest(req, res, next),
-]
+];
 
 export const loginValidator = [
   check('email')
@@ -74,7 +73,7 @@ export const loginValidator = [
     }),
 
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
 export const sendOtpvalidator = [
   check('email')
@@ -83,70 +82,127 @@ export const sendOtpvalidator = [
     .not()
     .isEmpty()
     .withMessage('Email cannot be empty'),
-
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
-export const verifyOtpValidator = [
-  check('email')
+// Forgot Password Validators
+export const forgotPasswordValidator = [
+  check('identifier')
     .exists()
-    .withMessage('Email is required')
+    .withMessage('Email or phone number is required')
     .not()
     .isEmpty()
-    .withMessage('Email cannot be empty'),
+    .withMessage('Email or phone number cannot be empty')
+    .custom((value) => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const phoneRegex = /^[+]?[0-9]{10,15}$/;
+      
+      if (!emailRegex.test(value) && !phoneRegex.test(value)) {
+        throw new Error('Please provide a valid email or phone number');
+      }
+      return true;
+    }),
+  (req, res, next) => validateRequest(req, res, next)
+];
 
+export const verifyForgotPasswordOtpValidator = [
   check('otp')
     .exists()
-    .withMessage('OTP is Required')
+    .withMessage('OTP is required')
     .not()
     .isEmpty()
-    .withMessage('OTP is required')
-    .isLength({ min: 4, max: 4 })
-    .withMessage('Invalid OTP')
+    .withMessage('OTP cannot be empty')
     .isNumeric()
-    .withMessage('Invalid OTP'),
-
+    .withMessage('OTP must be numeric')
+    .isLength({ min: 4, max: 4 })
+    .withMessage('OTP must be 4 digits'),
+  check('sessionToken')
+    .exists()
+    .withMessage('Session token is required')
+    .not()
+    .isEmpty()
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
+export const resetPasswordValidator = [
+  check('newPassword')
+    .exists()
+    .withMessage('New password is required')
+    .not()
+    .isEmpty()
+    .withMessage('New password cannot be empty')
+    .isStrongPassword()
+    .withMessage(
+      'Password must contain one digit, one special character, one uppercase letter with minimum length 8',
+    ),
+  check('sessionToken')
+    .exists()
+    .withMessage('Session token is required')
+    .not()
+    .isEmpty()
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
+  (req, res, next) => validateRequest(req, res, next)
+];
+
+export const resendForgotPasswordOtpValidator = [
+  check('sessionToken')
+    .exists()
+    .withMessage('Session token is required')
+    .not()
+    .isEmpty()
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
+  (req, res, next) => validateRequest(req, res, next)
+];
+
+// Existing validators (keeping for completeness)
 export const generateForgotPasswordTokenValidator = [
   check('email')
     .exists()
     .withMessage('Email is required')
     .not()
     .isEmpty()
-    .withMessage('Email cannot be empty'),
-
+    .withMessage('Email cannot be empty')
+    .isEmail()
+    .withMessage('Invalid email format'),
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
-export const resetPasswordValidator = [
-  check('forgotToken')
+export const verifyOtpValidator = [
+  check('otp')
     .exists()
-    .withMessage('Forgot Password Token Is Required')
+    .withMessage('OTP is required')
     .not()
     .isEmpty()
-    .withMessage('Missing Token'),
-
-  check('newPassword')
+    .withMessage('OTP cannot be empty')
+    .isNumeric()
+    .withMessage('OTP must be numeric'),
+  check('email')
     .exists()
-    .withMessage('Password is required')
+    .withMessage('Email is required')
     .not()
     .isEmpty()
-    .withMessage('Password cannot be empty')
-    .isStrongPassword()
-    .withMessage(
-      'Password must conntain one digit , one special character , one uppercase letter with minimum length 8',
-    ),
-
+    .withMessage('Email cannot be empty')
+    .isEmail()
+    .withMessage('Invalid email format'),
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
-
-export const verifyTokensValidator =[
-  (req , res , next)=>validateRequest(req , res , next)
-]
-
+export const verifyTokensValidator = [
+  check('token')
+    .exists()
+    .withMessage('Token is required')
+    .not()
+    .isEmpty()
+    .withMessage('Token cannot be empty'),
+  (req, res, next) => validateRequest(req, res, next)
+];
 
 export const sendEmailVerificationValidator = [
   check('email')
@@ -154,113 +210,102 @@ export const sendEmailVerificationValidator = [
     .withMessage('Email is required')
     .not()
     .isEmpty()
-    .withMessage('Email cannot be empty'),
-  check('companyName')
-    .exists()
-    .withMessage('Name is required') 
-    .notEmpty()
-    .withMessage('Name cannot be empty')
-    .isString()
-    .withMessage('Name should be a string') ,
-
+    .withMessage('Email cannot be empty')
+    .isEmail()
+    .withMessage('Invalid email format'),
   (req, res, next) => validateRequest(req, res, next)
-]
-
+];
 
 export const verifyEmailOtpValidator = [
-  check('sessionToken')
-    .exists()
-    .withMessage('Token is required')
-    .not()
-    .isEmpty()
-    .withMessage('Token cannot be empty'),
-
   check('otp')
     .exists()
-    .withMessage('OTP is Required')
+    .withMessage('OTP is required')
     .not()
     .isEmpty()
-    .withMessage('OTP is required')
-    .isLength({ min: 4, max: 4 })
-    .withMessage('Invalid OTP')
+    .withMessage('OTP cannot be empty')
     .isNumeric()
-    .withMessage('Invalid OTP'),
-
+    .withMessage('OTP must be numeric'),
+  check('email')
+    .exists()
+    .withMessage('Email is required')
+    .not()
+    .isEmpty()
+    .withMessage('Email cannot be empty')
+    .isEmail()
+    .withMessage('Invalid email format'),
   (req, res, next) => validateRequest(req, res, next)
-]
-
+];
 
 export const sendPhoneNumberOtpValidator = [
   check('phoneNumber')
     .exists()
-    .withMessage('Phone Number is required')
+    .withMessage('Phone number is required')
     .not()
     .isEmpty()
-    .withMessage('Phone Number cannot be empty')
+    .withMessage('Phone number cannot be empty')
     .isMobilePhone()
-    .withMessage('Invalid Phone Number'),
-
-  check('password')
-    .exists()
-    .withMessage('Password is required')
-    .not()
-    .isEmpty()
-    .withMessage('Password cannot be empty')
-    .isStrongPassword()
-    .withMessage(
-      'Password must contain one digit, one special character, one uppercase letter with minimum length 8'
-    ),
-
-  check('confirmPassword')
-    .exists()
-    .withMessage('Confirm Password is required')
-    .not()
-    .isEmpty()
-    .withMessage('Confirm Password cannot be empty')
-    .custom((value, { req }) => value === req.body.password)
-    .withMessage('Passwords do not match'),
-
-    check('sessionToken')
-      .exists()
-      .withMessage('Token is required')
-      .not()
-      .isEmpty()
-      .withMessage('Token cannot be empty'),
-
+    .withMessage('Invalid phone number format'),
   (req, res, next) => validateRequest(req, res, next)
-]
+];
 
 export const verifyPhoneNumberOtpValidator = [
-  check('sessionToken')
-    .exists()
-    .withMessage('Token  is required')
-    .not()
-    .isEmpty()
-    .withMessage('Token cannot be empty'),
-
   check('otp')
     .exists()
-    .withMessage('OTP is Required')
+    .withMessage('OTP is required')
     .not()
     .isEmpty()
-    .withMessage('OTP is required')
-    .isLength({ min: 4, max: 4 })
-    .withMessage('Invalid OTP')
+    .withMessage('OTP cannot be empty')
     .isNumeric()
-    .withMessage('Invalid OTP'),
+    .withMessage('OTP must be numeric'),
+  check('phoneNumber')
+    .exists()
+    .withMessage('Phone number is required')
+    .not()
+    .isEmpty()
+    .withMessage('Phone number cannot be empty')
+    .isMobilePhone()
+    .withMessage('Invalid phone number format'),
+  (req, res, next) => validateRequest(req, res, next)
+];
+
+export const resendOtpvalidator = [
+  check('identifier')
+    .exists()
+    .withMessage('Email or phone number is required')
+    .not()
+    .isEmpty()
+    .withMessage('Email or phone number cannot be empty'),
+  (req, res, next) => validateRequest(req, res, next)
+];
+
+
+
+export const changePasswordValidator = [
+  check('oldPassword')
+    .exists({ checkFalsy: true })
+    .withMessage('Old Password is required')
+    .isString()
+    .withMessage('Invalid Password'),
+
+  check('newPassword')
+    .exists({ checkFalsy: true })
+    .withMessage('New Password is required')
+    .isString()
+    .withMessage('Invalid Password')
+    .isStrongPassword()
+    .withMessage('New password must contain one digit, one special character, one uppercase letter with minimum length 8'),
+
+  body()
+    .custom((value, { req }) => {
+      if (req.body.oldPassword === req.body.newPassword) {
+        throw new Error('New password must be different from old password');
+      }
+      return true;
+    }),
+
+
+
+
 
   (req, res, next) => validateRequest(req, res, next)
-]
-
-
-
-export const resendOtpvalidator =[
-  check('sessionToken')
-    .exists()
-    .withMessage('Session Token is required')
-    .not()
-    .isEmpty()
-    .withMessage('Session Token cannot be empty'),
-
-    (req, res, next) => validateRequest(req, res, next)
-]
+];
