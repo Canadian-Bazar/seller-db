@@ -195,12 +195,6 @@ export const verifyOtpValidator = [
 ];
 
 export const verifyTokensValidator = [
-  check('token')
-    .exists()
-    .withMessage('Token is required')
-    .not()
-    .isEmpty()
-    .withMessage('Token cannot be empty'),
   (req, res, next) => validateRequest(req, res, next)
 ];
 
