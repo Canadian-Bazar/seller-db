@@ -419,6 +419,8 @@ export const acceptQuotationController = async (req, res) => {
 
 export const rejectQuotationController = async (req, res) => {
     const session = await mongoose.startSession();
+
+    const validatedData = matchedData(req);
     
     try {
         await session.withTransaction(async () => {
@@ -441,7 +443,6 @@ export const rejectQuotationController = async (req, res) => {
             const buyer = quotation.buyer;
             const seller = quotation.seller._id;
 
-            // Store notification data for after transaction
             req.notificationData = {
                 recipient: buyer,
                 sender: {
