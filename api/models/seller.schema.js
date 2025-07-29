@@ -85,6 +85,10 @@ const SellerSchema = new mongoose.Schema({
           type:Boolean ,
           default:false , 
           required:true
+     } ,
+
+     stripeCustomerId:{
+          type:String
      }
     
 
