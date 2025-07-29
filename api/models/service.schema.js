@@ -8,28 +8,9 @@ const serviceSchema = new mongoose.Schema({
         required:true
     }
     ,
-    /**
-     * Process and capabilities of the service
-     */
+    
 
-    processType:{
-        type:String,
-    } ,
-
-
-    materialsSupported:[
-       { type: String}
-    ] ,
-    surfaceFinishSupported:[
-        { type: String }
-    ] ,
-
-    coatingToleranceSupported:{
-        value: { type: String },
-        unit: { type: String }
-
-    }
-
+    
 })
 
 
