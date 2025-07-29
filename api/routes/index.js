@@ -1,5 +1,4 @@
 import express from 'express'
-
 import authRoutes from '../routes/auth.routes.js'
 import uploadRoutes from '../routes/upload.routes.js'
 import quotationRoutes from './quotation.routes.js'
@@ -20,6 +19,13 @@ import invoiceRoutes from './invoice.routes.js'
 import orderRoutes from './orders.routes.js'
 import contactChangeRoutes from './contact-change.routes.js'
 import subscriptionRoutes from './subscription.routes.js'
+import serviceInfoRoutes from './service-info.routes.js'
+import serviceCapabilitiesRoutes from './service-capabilities.routes.js'
+import serviceCustomizationRoutes from './service-customization.routes.js'
+import serviceMediaRoutes from './service-media.routes.js'
+import serviceOrderRoutes from './service-order.routes.js'
+import servicePricingRoutes from './service-pricing.routes.js'
+
 
 
 
@@ -46,6 +52,12 @@ v1Routes.use('/invoice' , invoiceRoutes)
 v1Routes.use('/orders' , orderRoutes)
 v1Routes.use('/contact-change' ,contactChangeRoutes)
 v1Routes.use('/subscription' , subscriptionRoutes)
+v1Routes.use('/service-info', serviceInfoRoutes)
+v1Routes.use('/service-capabilities', serviceCapabilitiesRoutes)
+v1Routes.use('/service-customization', serviceCustomizationRoutes)
+v1Routes.use('/service-media', serviceMediaRoutes)
+v1Routes.use('/service-order', serviceOrderRoutes)
+v1Routes.use('/service-pricing', servicePricingRoutes)
 
 
 router.use('/api/v1', v1Routes)

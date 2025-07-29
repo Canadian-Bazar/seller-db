@@ -2,6 +2,13 @@ import mongoose from 'mongoose'
 
 const SerivesProcessAndCapabilitySchema = new mongoose.Schema({
 
+
+    serviceId:{
+        type:mongoose.Schema.Types.ObjectId ,
+        ref:'Service' ,
+        required:true
+    } ,
+
     processType:{
         type:String ,
         required:true

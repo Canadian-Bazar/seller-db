@@ -2,6 +2,11 @@ import mongoose from 'mongoose'
 
 const ServiceMediaSchema = new mongoose.Schema({
 
+    serviceId:{
+        type:mongoose.Schema.Types.ObjectId ,
+        ref:'Service' ,
+        required:true} ,
+
     images:[
         {
             type:String ,

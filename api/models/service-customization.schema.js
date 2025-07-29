@@ -4,6 +4,13 @@ import mongoose from 'mongoose'
 
 
 const ServiceCustomizationSchema = new mongoose.Schema({
+
+
+    serviceId:{
+        type:mongoose.Schema.Types.ObjectId ,
+        ref:'Service' ,
+        required:true
+    } ,
     designImages:[{
         type:String ,
         required:true
@@ -29,7 +36,7 @@ const ServiceCustomizationSchema = new mongoose.Schema({
      rapidPrototype:{
         type:Boolean ,
         required:true ,
-        defaultfalse
+        default:false
 
      }
 } , {
