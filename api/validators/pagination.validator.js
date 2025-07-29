@@ -15,8 +15,7 @@ export const paginationValidator=[
 
     query('search')
     .optional()
-    .notEmpty()
-    .withMessage('Search cannot be empty')
+   
     .isString()
     .withMessage('Search should be a string')
 ]

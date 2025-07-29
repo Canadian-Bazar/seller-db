@@ -19,6 +19,9 @@ import productRoutes from './product.routes.js'
 import invoiceRoutes from './invoice.routes.js'
 import orderRoutes from './orders.routes.js'
 import contactChangeRoutes from './contact-change.routes.js'
+import subscriptionRoutes from './subscription.routes.js'
+
+
 
 const v1Routes = express.Router()
 const router = express.Router()
@@ -42,6 +45,8 @@ v1Routes.use('/products' , productRoutes)
 v1Routes.use('/invoice' , invoiceRoutes)
 v1Routes.use('/orders' , orderRoutes)
 v1Routes.use('/contact-change' ,contactChangeRoutes)
+v1Routes.use('/subscription' , subscriptionRoutes)
+
 
 router.use('/api/v1', v1Routes)
 

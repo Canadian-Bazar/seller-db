@@ -32,6 +32,7 @@ const SellerSchema = new mongoose.Schema({
      categories: [
           {
                 type: mongoose.Types.ObjectId ,
+                ref:'Category' ,
                 required:true
           }
      ],

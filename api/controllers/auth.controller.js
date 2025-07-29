@@ -20,6 +20,8 @@ import { sendTextMessage } from '../helpers/sendTextMessage.js'
 import { v4 as uuidv4 } from 'uuid';
 import SellerVerification from '../models/seller-verification.schema.js'
 import getCookieOptions from '../utils/getCookieOptions.js'
+import detectIdentifierType from '../helpers/detectIdentifierType.js'
+import ForgotPassword from '../models/seller-forgot-password.schema.js'
 
 /**
  * Controller: signupController
@@ -675,4 +677,283 @@ export const resendPhoneOtp = async (req, res) => {
         handleError(res, err);
     }
 };
+
+
+
+//change and forgot password
+
+
+
+export const changePasswordController = async(req , res)=>{
+  try{
+
+    const validatedData = matchedData(req)
+
+
+    const {oldPassword , newPassword} = validatedData
+
+    const userId = req.user._id
+
+
+    console.log(userId)
+
+    const seller = await Seller.findById(userId).select('password')
+
+    if(!seller){
+      throw buildErrorObject(httpStatus.NOT_FOUND , 'No such seller exists')
+    }
+
+
+    if(await bcrypt.compare(oldPassword , seller.password)){
+
+      const hashedPassword  = await bcrypt.hash(newPassword ,10 )
+
+      seller.password = hashedPassword
+
+      await seller.save()
+
+
+      return res.status(httpStatus.ACCEPTED).json(buildResponse(httpStatus.ACCEPTED , 'Password changed successfully'))
+
+    }else{
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Invalid Password')
+    }
+
+
+  }catch(err){
+    handleError(res ,err)
+  }
+}
+
+
+
+
+
+export const forgotPasswordRequest = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { identifier } = validatedData; 
+
+        const identifierType = detectIdentifierType(identifier);
+
+        console.log(identifierType , identifier)
+        
+        const seller = await Seller.findOne(
+          identifierType === 'email'
+            ? { email: identifier }
+            : { phone: identifier }
+        );
+        if (!seller) {
+            const message = identifierType === 'email' 
+                ? 'No seller found with this email' 
+                : 'No seller found with this phone number';
+            throw buildErrorObject(httpStatus.NOT_FOUND, message);
+        }
+
+        const sessionToken = uuidv4();
+
+        const otp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
+
+        const forgotPasswordRecord = await ForgotPassword.findOneAndUpdate(
+            { sellerId: seller._id },
+            {
+                sellerId: seller._id,
+                identifier,
+                identifierType,
+                otp: parseInt(otp),
+                otpExpiry: new Date(Date.now() + 10 * 60 * 1000), 
+                attempts: 0,
+                sessionToken,
+                isVerified: false
+            },
+            { upsert: true, new: true }
+        );
+
+        if (identifierType === 'email') {
+            await sendMail(identifier, 'forgot-password-otp.ejs', {
+                otp,
+                companyName: seller.companyName,
+                subject: 'Reset Your Password - OTP Verification'
+            });
+        } else {
+            const smsBody = getSignupBody(otp);
+            console.log('Forgot Password SMS OTP:', otp);
+            // await sendSMS(identifier, smsBody);
+        }
+
+        const maskedIdentifier = identifierType === 'email' 
+            ? identifier.replace(/(.{2}).*(@.*)/, '$1***$2')
+            : identifier.replace(/(\d{2})\d+(\d{2})/, '$1****$2');
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, {
+                sessionToken,
+                identifierType,
+                identifier: maskedIdentifier,
+                message: `OTP sent to your ${identifierType === 'email' ? 'email' : 'phone'}`,
+                expiresIn: '10 minutes'
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+
+
+export const verifyForgotPasswordOtp = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { otp, sessionToken } = validatedData;
+
+        const forgotPasswordRecord = await ForgotPassword.findOne({ sessionToken });
+        if (!forgotPasswordRecord) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Invalid session. Please request OTP again');
+        }
+
+        if (forgotPasswordRecord.isVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'OTP already verified. Please reset your password');
+        }
+
+        if (forgotPasswordRecord.otpExpiry < new Date()) {
+            throw buildErrorObject(httpStatus.UNAUTHORIZED, 'OTP expired. Please request a new one');
+        }
+
+        if (forgotPasswordRecord.attempts >= 5) {
+            throw buildErrorObject(httpStatus.TOO_MANY_REQUESTS, 'Too many invalid attempts. Please request OTP again');
+        }
+
+        if (forgotPasswordRecord.otp !== parseInt(otp)) {
+            forgotPasswordRecord.attempts += 1;
+            await forgotPasswordRecord.save();
+
+            throw buildErrorObject(httpStatus.UNAUTHORIZED, `Invalid OTP. ${5 - forgotPasswordRecord.attempts} attempts remaining`);
+        }
+
+        forgotPasswordRecord.isVerified = true;
+        forgotPasswordRecord.attempts = 0;
+        await forgotPasswordRecord.save();
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, {
+                sessionToken,
+                message: 'OTP verified successfully. You can now reset your password',
+                expiresIn: '50 minutes'
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+
+
+export const resetPassword = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { newPassword, sessionToken } = validatedData;
+
+        const forgotPasswordRecord = await ForgotPassword.findOne({ sessionToken });
+        if (!forgotPasswordRecord) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Invalid session. Please start the process again');
+        }
+
+        if (!forgotPasswordRecord.isVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Please verify OTP first');
+        }
+
+        const seller = await Seller.findById(forgotPasswordRecord.sellerId);
+        if (!seller) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Seller not found');
+        }
+
+        
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+        seller.password = hashedPassword;
+        await seller.save();
+
+        await ForgotPassword.findByIdAndDelete(forgotPasswordRecord._id);
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, {
+                message: 'Password reset successfully. You can now login with your new password'
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+export const resendForgotPasswordOtp = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { sessionToken } = validatedData;
+
+        const forgotPasswordRecord = await ForgotPassword.findOne({ sessionToken });
+        if (!forgotPasswordRecord) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Invalid session. Please start the forgot password process again');
+        }
+
+        if (forgotPasswordRecord.isVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'OTP already verified. Please reset your password');
+        }
+
+        // Check if seller still exists
+        const seller = await Seller.findById(forgotPasswordRecord.sellerId).lean();
+        if (!seller) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Seller not found');
+        }
+
+        const otp = otpGenerator.generate(4, {
+            upperCaseAlphabets: false,
+            lowerCaseAlphabets: false,
+            specialChars: false,
+            digits: true
+        });
+
+        forgotPasswordRecord.otp = parseInt(otp);
+        forgotPasswordRecord.otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        forgotPasswordRecord.attempts = 0;
+        await forgotPasswordRecord.save();
+
+        if (forgotPasswordRecord.identifierType === 'email') {
+            await sendMail(forgotPasswordRecord.identifier, 'forgot-password-otp.ejs', {
+                otp,
+                companyName: seller.companyName,
+                subject: 'Reset Your Password - New OTP'
+            });
+        } else {
+            const smsBody = getSignupBody(otp);
+            console.log('Resend Forgot Password SMS OTP:', otp);
+            // await sendSMS(forgotPasswordRecord.identifier, smsBody);
+        }
+
+        const maskedIdentifier = forgotPasswordRecord.identifierType === 'email' 
+            ? forgotPasswordRecord.identifier.replace(/(.{2}).*(@.*)/, '$1***$2')
+            : forgotPasswordRecord.identifier.replace(/(\d{2})\d+(\d{2})/, '$1****$2');
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, {
+                sessionToken,
+                identifierType: forgotPasswordRecord.identifierType,
+                identifier: maskedIdentifier,
+                message: `New OTP sent to your ${forgotPasswordRecord.identifierType === 'email' ? 'email' : 'phone'}`,
+                expiresIn: '10 minutes'
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
 
