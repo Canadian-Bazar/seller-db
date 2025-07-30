@@ -25,6 +25,8 @@ import serviceCustomizationRoutes from './service-customization.routes.js'
 import serviceMediaRoutes from './service-media.routes.js'
 import serviceOrderRoutes from './service-order.routes.js'
 import servicePricingRoutes from './service-pricing.routes.js'
+import dashboardRoutes from './dashboard.routes.js'
+import careerRoutes from './career.routes.js'
 
 
 
@@ -58,6 +60,10 @@ v1Routes.use('/service-customization', serviceCustomizationRoutes)
 v1Routes.use('/service-media', serviceMediaRoutes)
 v1Routes.use('/service-order', serviceOrderRoutes)
 v1Routes.use('/service-pricing', servicePricingRoutes)
+v1Routes.use('/dashboard', dashboardRoutes)
+v1Routes.use('/career', careerRoutes)
+
+
 
 
 router.use('/api/v1', v1Routes)
