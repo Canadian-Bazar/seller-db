@@ -19,11 +19,10 @@ const generateRefreshToken = (user = {}) => {
 }
 
 const generateTokens = (user = {}) => {
-  const accessToken = generateAuthToken(user)
-  const refreshToken = generateRefreshToken(user)
+  const sellerAccessToken = generateAuthToken(user)
+  const sellerRefreshToken = generateRefreshToken(user)
 
-  return { accessToken, refreshToken }
+  return { sellerAccessToken, sellerRefreshToken }
 }
 
 export default generateTokens
-global.generateTokens = generateTokens

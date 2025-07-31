@@ -120,10 +120,10 @@ export const loginController = async (req, res) => {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
     }
     seller.role = 'seller'
-    const { accessToken, refreshToken } = generateTokens(seller)
+    const { sellerAccessToken, sellerRefreshToken  } = generateTokens(seller)
     res
-       .cookie('accessToken', accessToken, getCookieOptions())
-      .cookie('refreshToken', refreshToken, getCookieOptions())
+       .cookie('sellerAccessToken', sellerAccessToken, getCookieOptions())
+      .cookie('sellerRefreshToken', sellerRefreshToken, getCookieOptions())
       .status(httpStatus.ACCEPTED)
       .json(buildResponse(httpStatus.ACCEPTED, seller))
 
@@ -139,8 +139,8 @@ export const loginController = async (req, res) => {
 export const logoutController = async (req, res) => {
   try {
     res
-      .clearCookie('accessToken', getCookieOptions())
-      .clearCookie('refreshToken', getCookieOptions())
+      .clearCookie('sellerAccesstoken', getCookieOptions())
+      .clearCookie('sellerRefreshToken', getCookieOptions())
       .status(httpStatus.NO_CONTENT)
       .json(buildResponse(httpStatus.NO_CONTENT))
   } catch (err) {
@@ -154,8 +154,8 @@ export const logoutController = async (req, res) => {
  */
 export const verifyTokensController = async (req, res) => {
   try {
-    let accessToken = req.cookies.accessToken
-    let refreshToken = req.cookies.refreshToken
+    let accessToken = req.cookies.sellerAccessToken
+    let refreshToken = req.cookies.sellerRefreshToken
 
     if (!accessToken) {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'ACCESS_TOKEN_MISSING')
@@ -204,10 +204,10 @@ export const verifyTokensController = async (req, res) => {
             role: seller.role,
           }
 
-          const { accessToken } = generateTokens(seller)
+          const { sellerAccessTokenaccessToken } = generateTokens(seller)
 
           res
-            .cookie('accessToken', accessToken, getCookieOptions())
+            .cookie('sellerAccessToken', sellerAccessTokenaccessToken, getCookieOptions())
             .status(httpStatus.CREATED)
             .json(buildResponse(httpStatus.CREATED, {
               success: true,
