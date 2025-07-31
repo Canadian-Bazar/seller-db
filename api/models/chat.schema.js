@@ -8,6 +8,12 @@ const ChatSchema = new mongoose.Schema({
         required: true,
         ref: 'Buyer'
     },
+
+        paymentType:{
+        type:String ,
+        enum:['Cash On Delivery' , 'Online'] ,
+        default:'Cash On Delivery'
+    } ,
     
     seller: {
         type: mongoose.Schema.Types.ObjectId,
