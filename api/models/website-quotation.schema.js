@@ -41,14 +41,16 @@ const WebsiteQuotationSchema = new mongoose.Schema({
 
     refernceWeburls:[
         {
-            type:String
+            type:mongoose.Types.ObjectId ,
+            ref:'WebsiteTemplate'
+
         }
     
     ] ,
 
     additionalDetails:{
         type:String ,
-    }
+    } 
 
 
 
