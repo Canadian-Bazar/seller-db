@@ -15,6 +15,7 @@ import mongoose from 'mongoose'
 import buildErrorObject from '../utils/buildErrorObject.js'
 import getSignedURL from '../utils/getSignedUrl.js'
 import handleError from '../utils/handleError.js'
+import { uploadFile } from '../helpers/aws-s3.js'
   
 dotenv.config()
 // Configure S3 Client
@@ -53,27 +54,16 @@ export const uploadController = async (req, res) => {
     if (!files || files.length === 0) {
       throw buildErrorObject(httpStatus.BAD_REQUEST, 'No files uploaded')
     }
+
+
+
+      const newImageUrls = await uploadFile(req.files);
+    
   
-    const uploadPromises = files.map(async (file) => {
-      const fileStream = fs.createReadStream(file.path)
-      const uploadParams = {
-        Bucket: bucketName,
-        Key: `uploads/${file.originalname}`,
-        Body: fileStream,
-      }
   
-      const command = new PutObjectCommand(uploadParams)
-      await s3.send(command)
-  
-      fs.unlinkSync(file.path)
-       
-  
-      return `uploads/${file.originalname}`
-    })
-    const uploadedFiles = await Promise.all(uploadPromises)
     res.status(httpStatus.OK).json({
       message: 'Files uploaded successfully',
-      files: uploadedFiles,
+      files: newImageUrls,
     })
   } catch (error) {
     handleError(res ,error)

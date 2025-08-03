@@ -42,25 +42,13 @@ const SellerSubscriptionSchema = new mongoose.Schema({
     required: true
   },
   autoRenew: { type: Boolean, default: true },
-  paymentStatus: {
-    type: String,
-    enum: ['paid', 'pending', 'failed', 'refunded'],
-    default: 'pending'
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  lastModifiedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  cancellationReason: {type:String},
-  cancellationDate: {type:Date},
-  isDeleted: { type: Boolean, default: false, index: true },
-  deletedAt: Date,
-  deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+
+
+  
+
+  
+
+
 }, { 
   timestamps: true,
   collection: 'SellerSubscription',

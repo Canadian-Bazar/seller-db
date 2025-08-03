@@ -1,0 +1,209 @@
+import buildErrorObject from "../utils/buildErrorObject.js";
+import buildResponse from "../utils/buildResponse.js";
+import Services from '../models/service.schema.js'
+import httpStatus from 'http-status';
+import handleError from "../utils/handleError.js";
+import { matchedData } from "express-validator";
+import { markStepCompleteAsync } from "../helpers/markStepComplete.js";
+import mongoose from 'mongoose'
+
+export const createServiceController = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const userId = req.user._id;
+
+        const { name, description } = validatedData;
+
+        const newService = new Services({
+            name: name,
+            description: description,
+            seller: userId,
+            
+            isComplete: false,
+            completionPercentage: 0,
+            incompleteSteps: ['serviceInfo', 'capabilities', 'pricing', 'customization', 'media' ,'order'],
+            stepStatus: {
+                serviceInfo: false,
+                capabilities: false,
+                order: false,
+                pricing: false,
+                customization: false,
+                media: false
+            }
+        });
+
+        const savedService = await newService.save();
+        markStepCompleteAsync(savedService._id, 'serviceInfo' , 'service');
+
+        res.status(httpStatus.CREATED).json(
+            buildResponse(httpStatus.CREATED, savedService)
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+export const updateServiceInfoController = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const userId = req.user._id;
+        const { serviceId } = req.params;
+        const { name, description } = validatedData;
+
+        const updateData = {};
+        
+        if (name !== undefined) {
+            updateData.name = name;
+        }
+        
+        if (description !== undefined) {
+            updateData.description = description;
+        }
+
+        const updatedService = await Services.findByIdAndUpdate(
+            serviceId,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedService) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Service not found');
+        }
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, 'Service info updated successfully')
+        );
+
+        markStepCompleteAsync(serviceId, 'serviceInfo' , 'service');
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+export const getServiceInfoController = async (req, res) => {
+    try {
+        const { serviceId } = req.params;
+
+        const service = await Services.findById(serviceId)
+            .select('name description completionPercentage incompleteSteps stepStatus');
+
+        if (!service) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Service not found');
+        }
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, service)
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+};
+
+
+export const getServicesController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+    const pipeline = [];
+
+    const page = parseInt(validatedData.page || 1, 10);
+    const limit = Math.min(parseInt(validatedData.limit || 10, 10), 50);
+    const offset = (page - 1) * limit;
+
+    const sellerId = req.user._id;
+    const matchStage = {
+      seller: new mongoose.Types.ObjectId(sellerId)
+    };
+
+    // Search filter
+    if (validatedData.search) {
+      matchStage.name = {
+        $regex: validatedData.search,
+        $options: 'i'
+      };
+    }
+
+    // Incomplete status filter
+    if (validatedData.inComplete) {
+      matchStage.isComplete = false;
+    }
+
+    pipeline.push({ $match: matchStage });
+
+    // Lookup ServiceMedia to get images
+    pipeline.push({
+      $lookup: {
+        from: 'ServiceMedia',
+        localField: '_id',
+        foreignField: 'serviceId',
+        as: 'mediaData'
+      }
+    });
+
+    // Unwind media data (optional - keeps services without media)
+    pipeline.push({
+      $unwind: {
+        path: '$mediaData',
+        preserveNullAndEmptyArrays: true
+      }
+    });
+
+    // Sorting logic
+    let sortStage = { createdAt: -1 };
+    if (validatedData.createdAt) {
+      sortStage = { createdAt: parseInt(validatedData.createdAt) };
+    }
+
+    pipeline.push({ $sort: sortStage });
+    pipeline.push({ $skip: offset });
+    pipeline.push({ $limit: limit });
+
+    // Final projection - full service schema + few images
+    pipeline.push({
+      $project: {
+        // Full service schema fields
+        name: 1,
+        description: 1,
+        isComplete: 1,
+        completionPercentage: 1,
+        incompleteSteps: 1,
+        stepStatus: 1,
+        createdAt: 1,
+        updatedAt: 1,
+
+        // Few images from ServiceMedia (first 3)
+        images: {
+          $slice: ['$mediaData.images', 3]
+        },
+        
+        // Optional: warranty info if available
+        warranty: '$mediaData.warranty'
+      }
+    });
+
+    const services = await Services.aggregate(pipeline);
+
+    // Get total count for pagination
+    const countResult = await Services.aggregate([
+      { $match: matchStage },
+      { $count: 'count' }
+    ]);
+    const total = countResult[0]?.count || 0;
+
+    const response = {
+      docs: services,
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+      hasPrev: page > 1,
+      hasNext: page * limit < total
+    };
+
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+  } catch (err) {
+    handleError(res, err);
+  }
+};

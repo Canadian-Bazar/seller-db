@@ -25,6 +25,7 @@ import  httpStatus  from 'http-status';
 
 
 
+
 export const getSubscriptionPlans = async (req, res) => {
   try {
     let userId = new mongoose.Types.ObjectId(req.user._id);
@@ -43,6 +44,20 @@ export const getSubscriptionPlans = async (req, res) => {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
+
+    // Get user's current subscription details separately
+    const userSubscription = await SellerSubscription.findOne({
+      seller: userId,
+      endDate: { $gt: new Date() }
+    }).populate([
+      {
+        path: 'planVersionId',
+        populate: {
+          path: 'templateId',
+          select: 'name description'
+        }
+      }
+    ]);
 
     const pipeline = [
       {
@@ -77,29 +92,6 @@ export const getSubscriptionPlans = async (req, res) => {
         }
       },
       {
-        $lookup: {
-          from: 'SellerSubscription',
-          let: {
-            planVersionId: '$currentVersion._id',
-            sellerId: userId
-          },
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $and: [
-                    { $eq: ['$seller', '$$sellerId'] },
-                    { $eq: ['$planVersionId', '$$planVersionId'] },
-                    { $eq: ['$isDeleted', false] }
-                  ]
-                }
-              }
-            }
-          ],
-          as: 'userSubscription'
-        }
-      },
-      {
         $project: {
           _id: '$_id',
           name: '$name',
@@ -108,31 +100,7 @@ export const getSubscriptionPlans = async (req, res) => {
           versionNumber: '$currentVersion.versionNumber',
           pricing: '$currentVersion.pricing',
           features: '$currentVersion.features',
-          availedByUser: {
-            $cond: {
-              if: { $gt: [{ $size: '$userSubscription' }, 0] },
-              then: true,
-              else: false
-            }
-          },
-          userSubscription: {
-            $cond: {
-              if: {
-                $gt: [{ $size: '$userSubscription' }, 0]
-              },
-              then: {
-                subscriptionId: { $arrayElemAt: ['$userSubscription._id', 0] },
-                startDate: { $arrayElemAt: ['$userSubscription.startDate', 0] },
-                endDate: { $arrayElemAt: ['$userSubscription.endDate', 0] },
-                status: { $arrayElemAt: ['$userSubscription.status', 0] },
-                billingCycle: { $arrayElemAt: ['$userSubscription.billingCycle', 0] },
-                autoRenew: { $arrayElemAt: ['$userSubscription.autoRenew', 0] },
-                paymentStatus: { $arrayElemAt: ['$userSubscription.paymentStatus', 0] },
-                cancellationDate: { $arrayElemAt: ['$userSubscription.cancellationDate', 0] }
-              },
-              else: null
-            }
-          }
+          featuresArray: '$currentVersion.featuresArray'
         }
       },
       {
@@ -165,8 +133,32 @@ export const getSubscriptionPlans = async (req, res) => {
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
-const response = 
-{
+    // Prepare user plan details
+    let userPlanDetails = null;
+    if (userSubscription) {
+      userPlanDetails = {
+        subscriptionId: userSubscription._id,
+        planId: userSubscription.planVersionId.templateId._id,
+        planName: userSubscription.planVersionId.templateId.name,
+        planDescription: userSubscription.planVersionId.templateId.description,
+        versionId: userSubscription.planVersionId._id,
+        startDate: userSubscription.startDate,
+        endDate: userSubscription.endDate,
+        status: userSubscription.status,
+        billingCycle: userSubscription.billingCycle,
+        autoRenew: userSubscription.autoRenew,
+        paymentStatus: userSubscription.paymentStatus,
+        cancellationDate: userSubscription.cancellationDate,
+        stripeSubscriptionId: userSubscription.stripeSubscriptionId,
+        pricing: userSubscription.planVersionId.pricing,
+        features: userSubscription.planVersionId.features,
+        featuresArray: userSubscription.planVersionId.featuresArray,
+        daysRemaining: Math.ceil((new Date(userSubscription.endDate) - new Date()) / (1000 * 60 * 60 * 24))
+      };
+    }
+
+    const response = {
+      plans: {
         docs,
         totalDocs,
         limit,
@@ -174,12 +166,14 @@ const response =
         totalPages,
         hasNext,
         hasPrev
-      
-}
+      },
+      userPlanDetails: userPlanDetails,
+      hasActiveSubscription: !!userSubscription
+    };
 
-    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , response));
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
 
   } catch (error) {
-    handleError(res , error)
-}
-}
+    handleError(res, error);
+  }
+};

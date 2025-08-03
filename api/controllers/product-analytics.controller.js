@@ -214,3 +214,18 @@ export const getProductAnalytics = async (req, res) => {
     handleError(res, err);
   }
 };
+
+
+
+
+export const getHomePageAnalytics = async(req , res)=>{
+  try{
+
+    const selllerId = req.user._id ;
+    
+
+
+  }catch(err){
+    handleError(res , err)
+  }
+}
