@@ -6,7 +6,7 @@ const WebsiteQuotationSchema = new mongoose.Schema({
 
     seller:{
         type:mongoose.Types.ObjectId ,
-        ref:'Sellers' ,
+        ref:'Seller' ,
         required:true
 
     } ,
@@ -39,7 +39,7 @@ const WebsiteQuotationSchema = new mongoose.Schema({
         type:String
     } ,
 
-    refernceWeburls:[
+    referenceWebTemplates:[
         {
             type:mongoose.Types.ObjectId ,
             ref:'WebsiteTemplate'

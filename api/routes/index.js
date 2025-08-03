@@ -27,6 +27,10 @@ import serviceOrderRoutes from './service-order.routes.js'
 import servicePricingRoutes from './service-pricing.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
 import careerRoutes from './career.routes.js'
+import websiteQuotationRouter from './website-quotation.routes.js'
+import websiteTemplatesRoutes from './wesbite-template.routes.js'
+import websiteDocumentationRoutes from './website-documentation.routes.js'
+import websiteProjectRoutes from './website-project.routes.js'
 
 
 
@@ -62,6 +66,13 @@ v1Routes.use('/service-order', serviceOrderRoutes)
 v1Routes.use('/service-pricing', servicePricingRoutes)
 v1Routes.use('/dashboard', dashboardRoutes)
 v1Routes.use('/career', careerRoutes)
+v1Routes.use('/website-quotation'  , websiteQuotationRouter)
+v1Routes.use('/website-templates' , websiteTemplatesRoutes)
+v1Routes.use('/website-documentation' , websiteDocumentationRoutes)
+v1Routes.use('/website-project' , websiteProjectRoutes)
+
+
+
 
 
 

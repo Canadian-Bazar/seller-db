@@ -2,12 +2,19 @@ import mongoose from "mongoose";
 
 const WebsiteDocumentationSchema = new mongoose.Schema({
   
-  documentationFile: {
+  documentation: {
     type: String,
     required: true
   },
+
+
+  websiteQuotationId:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:'WebsiteQuotation',
+    required:true
+
+  } ,
   
-  // Flexible pricing plans array
   pricingPlans: [{
     planName: {
       type: String,
@@ -17,12 +24,12 @@ const WebsiteDocumentationSchema = new mongoose.Schema({
     subscriptionPlanVersionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'SubscriptionPlanVersion',
-      required: false,  // Not required if user already has subscription
+      required: false,  
       index: true
     },
     subscriptionPrice: {
       type: Number,
-      required: false,  // Not needed if user has existing subscription
+      required: false,  
       min: 0,
       default: 0
     },
@@ -40,19 +47,35 @@ const WebsiteDocumentationSchema = new mongoose.Schema({
     isActive: {
       type: Boolean,
       default: true
+    } ,
+    selected: {
+      type: Boolean,
+      default: false
     }
+
+   
+
+   
   }],
+
+    expiresAt: {
+    type: Date,
+    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
+    index: { expireAfterSeconds: 0 }
+  } ,
+
+   token:{
+      type:String  ,
+      required:true
+    } ,
+     status:{
+      type:String ,
+      required:true ,
+      enum:['pending' , 'approved' ,'rejected'   ]
+
+    } ,
   
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  
-  isActive: {
-    type: Boolean,
-    default: true
-  }
+
 
 }, {
   timestamps: true,
