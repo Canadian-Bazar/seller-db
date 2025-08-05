@@ -101,9 +101,10 @@ const {id} = validatedData
 // Update report only
 export const updateWebsiteProjectReportController = async (req, res) => {
  try {
-   const { id } = req.params;
    const validatedData = matchedData(req);
-   const { report } = validatedData;
+      const { id } = validatedData;
+
+   const { report , percentageCompletion } = validatedData;
 
    const websiteProject = await WebsiteProject.findOne({ 
      _id: id, 
@@ -116,7 +117,7 @@ export const updateWebsiteProjectReportController = async (req, res) => {
 
    const updatedProject = await WebsiteProject.findByIdAndUpdate(
      id,
-     { report },
+     { report , percentageCompletion },
      { new: true, runValidators: true }
    );
 

@@ -31,6 +31,7 @@ import websiteQuotationRouter from './website-quotation.routes.js'
 import websiteTemplatesRoutes from './wesbite-template.routes.js'
 import websiteDocumentationRoutes from './website-documentation.routes.js'
 import websiteProjectRoutes from './website-project.routes.js'
+import reviewRoutes from './review.routes.js'
 
 
 
@@ -70,6 +71,7 @@ v1Routes.use('/website-quotation'  , websiteQuotationRouter)
 v1Routes.use('/website-templates' , websiteTemplatesRoutes)
 v1Routes.use('/website-documentation' , websiteDocumentationRoutes)
 v1Routes.use('/website-project' , websiteProjectRoutes)
+v1Routes.use('/reviews' , reviewRoutes)
 
 
 
