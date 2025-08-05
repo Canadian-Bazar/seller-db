@@ -3,12 +3,7 @@ import mongoose from 'mongoose'
 const ServiceSchema = new mongoose.Schema({
 
 
-   slug:{
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-   } ,
+
 
     seller: {
         type: mongoose.Schema.Types.ObjectId,
