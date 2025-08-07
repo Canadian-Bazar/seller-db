@@ -56,3 +56,14 @@ export const validateUpdateWebsiteProjectReport = [
 
  (req, res, next) => validateRequest(req, res, next)
 ];
+
+
+
+
+export const validateGetProjectStatus =[
+
+
+
+   (req , res , next) => validateRequest(req, res, next)
+
+]
