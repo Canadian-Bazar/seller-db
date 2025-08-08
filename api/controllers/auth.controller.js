@@ -530,6 +530,9 @@ export const sendPhoneNumberOtp = async(req , res)=>{
         const body = getSignupBody(phoneOtp);
         console.log('Phone OTP:', phoneOtp);
 
+        await sendTextMessage(phoneNumber, phoneOtp , body);
+
+
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK , {
                 sessionToken,
