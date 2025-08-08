@@ -156,6 +156,10 @@ export const verifyTokensController = async (req, res) => {
   try {
     let accessToken = req.cookies.sellerAccessToken
     let refreshToken = req.cookies.sellerRefreshToken
+    let user = {
+      isVerified:false,
+      isProfileComplete:false,
+    }
 
     if (!accessToken) {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'ACCESS_TOKEN_MISSING')
@@ -165,14 +169,16 @@ export const verifyTokensController = async (req, res) => {
 
     try {
       let seller = jwt.verify(accessToken, process.env.AUTH_SECRET)
+
+      user = await Seller.findById(seller._id).select('isProfileComplete isVerified')
       
       seller = {
         _id: seller._id,
         email: seller.email,
         companyName: seller.companyName,
-        companyLogo: seller.logo,
-        isVerified: seller.isVerified || false,
-        isProfileComplete: seller.isProfileComplete || false,
+        logo: seller.logo,
+        isVerified: user?.isVerified || seller.isVerified || false,
+        isProfileComplete: user?.isProfileComplete || seller.isProfileComplete || false,
         role: seller.role,
       }
 
@@ -198,16 +204,16 @@ export const verifyTokensController = async (req, res) => {
             _id: seller._id,
             email: seller.email,
             companyName: seller.companyName,
-            companyLogo: seller.logo,
-            isVerified: seller.isVerified || false,
-            isProfileComplete: seller.isProfileComplete || false,
+            logo: seller.logo,
+            isVerified: user?.isVerified || seller.isVerified || false,
+            isProfileComplete: user?.isProfileComplete || seller.isProfileComplete || false,
             role: seller.role,
           }
 
-          const { sellerAccessTokenaccessToken } = generateTokens(seller)
+          const { sellerAccessToken } = generateTokens(seller)
 
           res
-            .cookie('sellerAccessToken', sellerAccessTokenaccessToken, getCookieOptions())
+            .cookie('sellerAccessToken', sellerAccessToken, getCookieOptions())
             .status(httpStatus.CREATED)
             .json(buildResponse(httpStatus.CREATED, {
               success: true,
@@ -490,7 +496,7 @@ export const sendPhoneNumberOtp = async(req , res)=>{
   try{
        const validatedData = matchedData(req);
         const { sessionToken, phoneNumber, password } = validatedData;
-
+    console.log(phoneNumber)
         const verification = await SellerVerification.findOne({ sessionToken });
 
         console.log(verification)
@@ -786,7 +792,7 @@ export const forgotPasswordRequest = async (req, res) => {
         } else {
             const smsBody = getSignupBody(otp);
             console.log('Forgot Password SMS OTP:', otp);
-            // await sendSMS(identifier, smsBody);
+            await sendTextMessage(identifier,'',smsBody);
         }
 
         const maskedIdentifier = identifierType === 'email' 
@@ -807,8 +813,6 @@ export const forgotPasswordRequest = async (req, res) => {
         handleError(res, err);
     }
 };
-
-
 
 export const verifyForgotPasswordOtp = async (req, res) => {
     try {
@@ -855,8 +859,6 @@ export const verifyForgotPasswordOtp = async (req, res) => {
         handleError(res, err);
     }
 };
-
-
 
 export const resetPassword = async (req, res) => {
     try {

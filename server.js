@@ -53,7 +53,7 @@ init().then((dbStatus) => {
       allowedHeaders: ['Content-Type', 'x-user-role'] ,
       credentials: true,
       methods: 'POST, GET, PATCH, PUT, DELETE, HEAD, OPTIONS',
-      origin: [process.env.FRONTEND_URL , 'http://localhost:5174']
+      origin: [process.env.FRONTEND_URL , 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
     }),
   )
 
