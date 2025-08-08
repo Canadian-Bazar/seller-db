@@ -7,22 +7,21 @@ export const validateSyncProductPricing = [
         .isMongoId()
         .withMessage('Product ID should be a mongoose ID'),
 
-    
-
+    // quantityPriceTiers is optional now
     check('quantityPriceTiers')
-        .exists({ checkFalsy: true })
+        .optional()
         .isArray({ min: 1 })
         .withMessage('Quantity price tiers must be a non-empty array if provided'),
 
     check('quantityPriceTiers.*.min')
-        .if(check('quantityPriceTiers').isArray({ min: 1 }))
+        .if(check('quantityPriceTiers').exists())
         .exists({ checkFalsy: true })
         .withMessage('Tier minimum quantity is required')
         .isInt({ min: 1 })
         .withMessage('Tier minimum must be at least 1'),
 
     check('quantityPriceTiers.*.max')
-        .if(check('quantityPriceTiers').isArray({ min: 1 }))
+        .if(check('quantityPriceTiers').exists())
         .optional()
         .isInt({ min: 1 })
         .withMessage('Tier maximum must be at least 1')
@@ -36,12 +35,11 @@ export const validateSyncProductPricing = [
             if (!isLastElement && (value === undefined || value === null || value === '')) {
                 throw new Error('Max quantity is required for all tiers except the last one');
             }
-
             return true;
         }),
 
     check('quantityPriceTiers.*.price')
-        .if(check('quantityPriceTiers').isArray({ min: 1 }))
+        .if(check('quantityPriceTiers').exists())
         .exists({ checkFalsy: true })
         .withMessage('Tier price is required')
         .isNumeric()
@@ -54,7 +52,7 @@ export const validateSyncProductPricing = [
         }),
 
     check('quantityPriceTiers')
-        .if(check('quantityPriceTiers').isArray({ min: 1 }))
+        .if(check('quantityPriceTiers').exists())
         .custom((tiers) => {
             for (let i = 0; i < tiers.length; i++) {
                 const tier = tiers[i];
@@ -73,23 +71,21 @@ export const validateSyncProductPricing = [
             return true;
         }),
 
+    // leadTime is optional now
     check('leadTime')
-        .exists()
-        .withMessage('Lead time is required')
-        .notEmpty()
-        .withMessage('Lead time cannot be empty')
+        .optional()
         .isArray({ min: 1 })
-        .withMessage('Lead time must be a non-empty array'),
+        .withMessage('Lead time must be a non-empty array if provided'),
 
     check('leadTime.*.min')
-        .if(check('leadTime').isArray({ min: 1 }))
+        .if(check('leadTime').exists())
         .exists({ checkFalsy: true })
         .withMessage('Lead time minimum is required')
         .isInt({ min: 1 })
         .withMessage('Lead time minimum must be at least 1'),
 
     check('leadTime.*.max')
-        .if(check('leadTime').isArray({ min: 1 }))
+        .if(check('leadTime').exists())
         .optional()
         .isInt({ min: 1 })
         .withMessage('Lead time maximum must be at least 1')
@@ -103,19 +99,18 @@ export const validateSyncProductPricing = [
             if (!isLastElement && (value === undefined || value === null || value === '')) {
                 throw new Error('Max lead time is required for all ranges except the last one');
             }
-
             return true;
         }),
 
     check('leadTime.*.days')
-        .if(check('leadTime').isArray({ min: 1 }))
+        .if(check('leadTime').exists())
         .exists({ checkFalsy: true })
         .withMessage('Lead time days is required')
         .isInt({ min: 1 })
         .withMessage('Lead time days must be at least 1'),
 
     check('leadTime')
-        .if(check('leadTime').isArray({ min: 1 }))
+        .if(check('leadTime').exists())
         .custom((leadTimes) => {
             for (let i = 0; i < leadTimes.length; i++) {
                 const leadTime = leadTimes[i];
@@ -158,6 +153,7 @@ export const validateSyncProductPricing = [
 
     (req, res, next) => validateRequest(req, res, next)
 ];
+
 
 
 export const validateGetProductPricing = [

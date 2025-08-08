@@ -139,7 +139,7 @@ export const loginController = async (req, res) => {
 export const logoutController = async (req, res) => {
   try {
     res
-      .clearCookie('sellerAccesstoken', getCookieOptions())
+      .clearCookie('sellerAccessToken', getCookieOptions())
       .clearCookie('sellerRefreshToken', getCookieOptions())
       .status(httpStatus.NO_CONTENT)
       .json(buildResponse(httpStatus.NO_CONTENT))
