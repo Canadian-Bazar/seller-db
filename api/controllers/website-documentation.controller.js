@@ -8,6 +8,7 @@ import { matchedData } from "express-validator";
 import jwt from 'jsonwebtoken'
 import SellerSubscription from '../models/seller-subscription.schema.js'
 import mongoose from "mongoose";
+import Seller from '../models/seller.schema.js'
 
 
 
@@ -44,6 +45,14 @@ export const createWebsiteDocumentationController = async (req, res) => {
     }
 
     const sellerId = websiteQuotationExists.seller;
+
+
+    const sellerExists = await Seller.findById(sellerId).session(session);
+    if (!sellerExists){
+      throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid Seller ID');
+    }
+
+    
 
     const activeSellerSubscription = await SellerSubscription.findOne({
       seller: sellerId,
@@ -99,6 +108,13 @@ export const createWebsiteDocumentationController = async (req, res) => {
     );
 
     await session.commitTransaction();
+
+
+    sendMail(sellerExists.email, 'documentation.ejs', {
+      token:finalToken,
+      subject: 'Documentation',
+      frontendURL: process.env.FRONTEND_URL,
+    })
     isTransactionCommitted = true;
 
     return res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED,

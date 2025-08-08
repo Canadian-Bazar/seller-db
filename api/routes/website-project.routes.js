@@ -14,8 +14,14 @@ websiteProjectRouter.get(
    websiteProjectControllers.getAllWebsiteProjectsController
 )
 
-// Get single website project by ID
+
 websiteProjectRouter.get(
+   '/current-project' ,
+   websiteProjectValidators.validateGetProjectStatus ,
+   websiteProjectControllers.getCurrentProjectStatusController
+)
+
+ websiteProjectRouter.get(
    '/:id',
    websiteProjectValidators.validateGetWebsiteProjectById,
    websiteProjectControllers.getWebsiteProjectByIdController

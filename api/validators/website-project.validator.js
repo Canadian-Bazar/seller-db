@@ -45,5 +45,25 @@ export const validateUpdateWebsiteProjectReport = [
    .isLength({ min: 1, max: 5000 })
    .withMessage('Report must be between 1 and 5000 characters'),
 
+
+
+  check('percentageCompletion')
+   .exists({ checkFalsy: true })
+   .withMessage('Percentage completion is required')
+   .isInt({ min: 0, max: 100 })
+   .withMessage('Percentage completion must be an integer between 0 and 100') ,
+
+
  (req, res, next) => validateRequest(req, res, next)
 ];
+
+
+
+
+export const validateGetProjectStatus =[
+
+
+
+   (req , res , next) => validateRequest(req, res, next)
+
+]

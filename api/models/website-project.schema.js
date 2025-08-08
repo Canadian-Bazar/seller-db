@@ -56,8 +56,15 @@ const WebsiteProjectSchema = new mongoose.Schema({
   
   notes: String ,
 
-  report:String 
+  report:String  ,
 
+  percentageCompletion:{
+    type :Number ,
+    default:0
+  } ,
+
+  amountPaid:Number ,
+  amountPending:Number
 }, {
   timestamps: true,
   collection: 'WebsiteProjects'
