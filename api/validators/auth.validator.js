@@ -207,6 +207,12 @@ export const sendEmailVerificationValidator = [
     .withMessage('Email cannot be empty')
     .isEmail()
     .withMessage('Invalid email format'),
+  check('companyName')
+  .exists()
+  .withMessage('Company Name is required') 
+  .notEmpty()
+  .withMessage('Company Namd cannot empty') ,
+
   (req, res, next) => validateRequest(req, res, next)
 ];
 
