@@ -9,6 +9,7 @@ const validateRequest = (req, res, next) => {
     res.status(httpStatus.UNPROCESSABLE_ENTITY).json({
       success: false,
       code: httpStatus.UNPROCESSABLE_ENTITY,
+      message: err.errors[0]?.msg || err.message,
       ...err,
     })
   }
