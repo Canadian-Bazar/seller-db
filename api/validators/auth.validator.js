@@ -239,6 +239,36 @@ export const sendPhoneNumberOtpValidator = [
     .withMessage('Phone number cannot be empty')
     .isMobilePhone()
     .withMessage('Invalid phone number format'),
+
+
+ check('sessionToken')
+    .exists()
+    .withMessage('Session token is required')
+    .not()
+    .isEmpty()
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
+
+  check('password')
+    .exists()
+    .withMessage('Password is required')
+    .not()
+    .isEmpty()
+    .withMessage('Password cannot be empty')
+    .isStrongPassword()
+    .withMessage('Password must be strong'),
+
+  check('confirmPassword')
+    .exists()
+    .withMessage('Confirm password is required')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Passwords do not match');
+      }
+      return true;
+    }) ,
+
   (req, res, next) => validateRequest(req, res, next)
 ];
 
@@ -251,7 +281,7 @@ export const verifyPhoneNumberOtpValidator = [
     .withMessage('OTP cannot be empty')
     .isNumeric()
     .withMessage('OTP must be numeric'),
-    check('sessionToken')
+  check('sessionToken')
     .exists()
     .withMessage('Session token is required')
     .not()
