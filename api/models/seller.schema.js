@@ -45,7 +45,7 @@ const SellerSchema = new mongoose.Schema({
      approvalStatus: {
           type: String,
           enum: ['pending' ,'submitted', 'approved', 'rejected'],
-          default: 'pending',
+          default: 'approved',
      },
      password: {
           type: String,
@@ -78,7 +78,7 @@ const SellerSchema = new mongoose.Schema({
    
      isVerified: {
           type: Boolean,
-          default: false,
+          default: true,
           required: true
      } ,
      isProfileComplete:{

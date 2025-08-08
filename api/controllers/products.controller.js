@@ -9,6 +9,11 @@ import httpStatus from 'http-status'
 
 
 
+
+
+
+
+
 export const getProductsController = async (req, res) => {
   try {
     const validatedData = matchedData(req);
