@@ -219,14 +219,14 @@ export const verifyEmailOtpValidator = [
     .withMessage('OTP cannot be empty')
     .isNumeric()
     .withMessage('OTP must be numeric'),
-  check('email')
+  check('sessionToken')
     .exists()
-    .withMessage('Email is required')
+    .withMessage('Session token is required')
     .not()
     .isEmpty()
-    .withMessage('Email cannot be empty')
-    .isEmail()
-    .withMessage('Invalid email format'),
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
   (req, res, next) => validateRequest(req, res, next)
 ];
 
@@ -251,14 +251,14 @@ export const verifyPhoneNumberOtpValidator = [
     .withMessage('OTP cannot be empty')
     .isNumeric()
     .withMessage('OTP must be numeric'),
-  check('phoneNumber')
+    check('sessionToken')
     .exists()
-    .withMessage('Phone number is required')
+    .withMessage('Session token is required')
     .not()
     .isEmpty()
-    .withMessage('Phone number cannot be empty')
-    .isMobilePhone()
-    .withMessage('Invalid phone number format'),
+    .withMessage('Session token cannot be empty')
+    .isUUID()
+    .withMessage('Invalid session token format'),
   (req, res, next) => validateRequest(req, res, next)
 ];
 
