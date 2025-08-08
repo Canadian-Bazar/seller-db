@@ -73,9 +73,12 @@ export const validateSyncProductPricing = [
 
     // leadTime is optional now
     check('leadTime')
-        .optional()
-        .isArray({ min: 1 })
-        .withMessage('Lead time must be a non-empty array if provided'),
+  .custom((value) => {
+    if (value === undefined || value === null) return true; // skip
+    if (Array.isArray(value) && value.length === 0) return true; // skip empty array
+    if (!Array.isArray(value)) throw new Error('Lead time must be an array');
+    return true;
+  }),
 
     check('leadTime.*.min')
         .if(check('leadTime').exists())
