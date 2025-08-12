@@ -9,16 +9,23 @@ export const validateCreateProductServices = [
         .withMessage('Product ID should be a mongoose ID'),
 
     check('services')
-        .isArray({min:1})
-        .withMessage('Services must be a non empty array'),
+    .optional()
+    .custom((value) => {
+        if (value === undefined || value === null) return true; // skip
+        if (Array.isArray(value) && value.length === 0) return true; // skip empty array
+        if (!Array.isArray(value)) throw new Error('Services must be an array');
+        return true;
+    }),
 
-    check('services.*')
-        .if(check('services').isArray({ min: 1 }))
-        .isString()
-        .withMessage('Each service must be a string')
-        .trim()
-        .isLength({ min: 1, max: 200 })
-        .withMessage('Each service must be between 1 and 200 characters'),
+check('services.*')
+    .if(check('services').exists().isArray({ min: 1 }))
+    .isString()
+    .withMessage('Each service must be a string')
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Each service must be between 1 and 200 characters'),
+
+    
 
 
         (req , res, next)=>validateRequest(req , res, next)

@@ -64,7 +64,7 @@ export const markStepCompleteAsync = async (entityId, completedStep, type = 'pro
         
         if (type === 'product') {
             Model = Products;
-            totalSteps = 7; // product steps: productInfo, attributes, images, pricing, variations, services, description
+            totalSteps = 5; // product steps: productInfo, attributes, images, pricing, variations, services, description
         } else if (type === 'service') {
             Model = Services;
             totalSteps = 6; 

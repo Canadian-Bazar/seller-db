@@ -94,7 +94,7 @@ const ProductSchema = new mongoose.Schema({
     
     incompleteSteps: [{
         type: String,
-        enum: ['productInfo', 'attributes', 'images', 'pricing', 'variations', 'services', 'description']
+        enum: ['productInfo', 'attributes', 'images', 'pricing', 'services']
     }],
     
     stepStatus: {
@@ -102,9 +102,7 @@ const ProductSchema = new mongoose.Schema({
         attributes: { type: Boolean, default: false },     
         images: { type: Boolean, default: false },         
         pricing: { type: Boolean, default: false },         
-        variations: { type: Boolean, default: false },    
-        services: { type: Boolean, default: false },        
-        description: { type: Boolean, default: false }      
+        services: { type: Boolean, default: false },    
     },
 
 
