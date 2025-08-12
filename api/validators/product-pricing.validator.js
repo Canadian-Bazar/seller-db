@@ -7,27 +7,31 @@ export const validateSyncProductPricing = [
         .isMongoId()
         .withMessage('Product ID should be a mongoose ID'),
 
-    // quantityPriceTiers is optional now
+    // quantityPriceTiers is optional and allows empty arrays
     check('quantityPriceTiers')
         .optional()
-        .isArray({ min: 1 })
-        .withMessage('Quantity price tiers must be a non-empty array if provided'),
+        .custom((value) => {
+            if (value === undefined || value === null) return true; // skip
+            if (Array.isArray(value) && value.length === 0) return true; // skip empty array
+            if (!Array.isArray(value)) throw new Error('Quantity price tiers must be an array');
+            return true;
+        }),
 
     check('quantityPriceTiers.*.min')
-        .if(check('quantityPriceTiers').exists())
+        .if(check('quantityPriceTiers').exists().isArray({ min: 1 }))
         .exists({ checkFalsy: true })
         .withMessage('Tier minimum quantity is required')
         .isInt({ min: 1 })
         .withMessage('Tier minimum must be at least 1'),
 
     check('quantityPriceTiers.*.max')
-        .if(check('quantityPriceTiers').exists())
+        .if(check('quantityPriceTiers').exists().isArray({ min: 1 }))
         .optional()
         .isInt({ min: 1 })
         .withMessage('Tier maximum must be at least 1')
         .custom((value, { req, path }) => {
             const tiers = req.body.quantityPriceTiers;
-            if (!Array.isArray(tiers)) return true;
+            if (!Array.isArray(tiers) || tiers.length === 0) return true;
 
             const index = parseInt(path.match(/\[(\d+)\]/)[1]);
             const isLastElement = index === tiers.length - 1;
@@ -39,7 +43,7 @@ export const validateSyncProductPricing = [
         }),
 
     check('quantityPriceTiers.*.price')
-        .if(check('quantityPriceTiers').exists())
+        .if(check('quantityPriceTiers').exists().isArray({ min: 1 }))
         .exists({ checkFalsy: true })
         .withMessage('Tier price is required')
         .isNumeric()
@@ -52,8 +56,10 @@ export const validateSyncProductPricing = [
         }),
 
     check('quantityPriceTiers')
-        .if(check('quantityPriceTiers').exists())
+        .if(check('quantityPriceTiers').exists().isArray({ min: 1 }))
         .custom((tiers) => {
+            if (!Array.isArray(tiers) || tiers.length === 0) return true;
+            
             for (let i = 0; i < tiers.length; i++) {
                 const tier = tiers[i];
 
@@ -71,30 +77,31 @@ export const validateSyncProductPricing = [
             return true;
         }),
 
-    // leadTime is optional now
+    // leadTime is optional and allows empty arrays
     check('leadTime')
-  .custom((value) => {
-    if (value === undefined || value === null) return true; // skip
-    if (Array.isArray(value) && value.length === 0) return true; // skip empty array
-    if (!Array.isArray(value)) throw new Error('Lead time must be an array');
-    return true;
-  }),
+        .optional()
+        .custom((value) => {
+            if (value === undefined || value === null) return true; // skip
+            if (Array.isArray(value) && value.length === 0) return true; // skip empty array
+            if (!Array.isArray(value)) throw new Error('Lead time must be an array');
+            return true;
+        }),
 
     check('leadTime.*.min')
-        .if(check('leadTime').exists())
+        .if(check('leadTime').exists().isArray({ min: 1 }))
         .exists({ checkFalsy: true })
         .withMessage('Lead time minimum is required')
         .isInt({ min: 1 })
         .withMessage('Lead time minimum must be at least 1'),
 
     check('leadTime.*.max')
-        .if(check('leadTime').exists())
+        .if(check('leadTime').exists().isArray({ min: 1 }))
         .optional()
         .isInt({ min: 1 })
         .withMessage('Lead time maximum must be at least 1')
         .custom((value, { req, path }) => {
             const leadTimes = req.body.leadTime;
-            if (!Array.isArray(leadTimes)) return true;
+            if (!Array.isArray(leadTimes) || leadTimes.length === 0) return true;
 
             const index = parseInt(path.match(/\[(\d+)\]/)[1]);
             const isLastElement = index === leadTimes.length - 1;
@@ -106,15 +113,17 @@ export const validateSyncProductPricing = [
         }),
 
     check('leadTime.*.days')
-        .if(check('leadTime').exists())
+        .if(check('leadTime').exists().isArray({ min: 1 }))
         .exists({ checkFalsy: true })
         .withMessage('Lead time days is required')
         .isInt({ min: 1 })
         .withMessage('Lead time days must be at least 1'),
 
     check('leadTime')
-        .if(check('leadTime').exists())
+        .if(check('leadTime').exists().isArray({ min: 1 }))
         .custom((leadTimes) => {
+            if (!Array.isArray(leadTimes) || leadTimes.length === 0) return true;
+            
             for (let i = 0; i < leadTimes.length; i++) {
                 const leadTime = leadTimes[i];
 
@@ -132,14 +141,22 @@ export const validateSyncProductPricing = [
             return true;
         }),
 
+    // minPrice is REQUIRED
     check('minPrice')
         .exists()
         .withMessage('Please provide a minimum price for negotiation')
         .notEmpty()
         .withMessage('Please provide a minimum price for negotiation')
         .isNumeric()
-        .withMessage('Minimum price must be a number'),
+        .withMessage('Minimum price must be a number')
+        .custom(value => {
+            if (Number(value) <= 0) {
+                throw new Error('Minimum price must be greater than 0');
+            }
+            return true;
+        }),
 
+    // maxPrice is REQUIRED
     check('maxPrice')
         .exists()
         .withMessage('Please provide a maximum price for negotiation')
@@ -148,8 +165,11 @@ export const validateSyncProductPricing = [
         .isNumeric()
         .withMessage('Maximum price must be a number')
         .custom((value, { req }) => {
-            if (req.body.minPrice !== undefined && Number(value) < Number(req.body.minPrice)) {
-                throw new Error('Maximum price must be greater than or equal to minimum price');
+            if (Number(value) <= 0) {
+                throw new Error('Maximum price must be greater than 0');
+            }
+            if (req.body.minPrice !== undefined && Number(value) <= Number(req.body.minPrice)) {
+                throw new Error('Maximum price must be greater than minimum price');
             }
             return true;
         }),

@@ -27,7 +27,6 @@ export const requireAuth =(req , res , next)=>{
   try{
     let token = req.cookies.sellerAccessToken
 
-    console.log(req.cookies)
 
 
 

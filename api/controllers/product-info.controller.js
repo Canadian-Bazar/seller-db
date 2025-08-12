@@ -292,18 +292,16 @@ export const createProductController = async (req, res) => {
             isCustomizable: false,
             moq :moq ,
             
-            // Initialize completion tracking
             isComplete: false,
             completionPercentage: 0,
-            incompleteSteps: ['productInfo', 'attributes', 'images', 'pricing', 'variations', 'services', 'description'],
+            incompleteSteps: ['productInfo', 'attributes', 'images', 'pricing', 'services'],
             stepStatus: {
                 productInfo: false,
                 attributes: false,
                 images: false,
                 pricing: false,
-                variations: false,
+                
                 services: false,
-                description: false
             }
         });
 
