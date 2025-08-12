@@ -70,10 +70,12 @@ export const updateProfileValidator = [
     .withMessage('State can only contain letters and spaces'),
 
   check('zip')
-    .optional()
-    .not()
-    .isEmpty()
-    .withMessage('ZIP code cannot be empty') ,
+ .optional()
+  .notEmpty()
+  .withMessage('Postal code cannot be empty')
+  .matches(/^[A-Za-z]\d[A-Za-z][ ]?\d[A-Za-z]\d$/)
+  .withMessage('Invalid Canadian postal code format'),
+
     // .isPostalCode({locale:'CA'})
     // .withMessage('Invalid ZIP code format'),
 
@@ -82,7 +84,6 @@ export const updateProfileValidator = [
     body()
     .custom((value, { req }) => {
       const allowedFields = [
-        'fullName',
         'businessType',
         'categories',
         'businessNumber',

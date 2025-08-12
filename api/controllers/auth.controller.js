@@ -22,6 +22,7 @@ import SellerVerification from '../models/seller-verification.schema.js'
 import getCookieOptions from '../utils/getCookieOptions.js'
 import detectIdentifierType from '../helpers/detectIdentifierType.js'
 import ForgotPassword from '../models/seller-forgot-password.schema.js'
+import StoreClaimUsers from '../models/store-claim-users.schema.js'
 
 /**
  * Controller: signupController
@@ -247,6 +248,18 @@ export const sendOtpController = async (req, res) => {
       throw buildErrorObject(httpStatus.CONFLICT, 'Seller Already Exists')
     }
 
+
+
+     const verificationExists = await Verifications.findOneAndUpdate(
+      { email: requestData.email },
+      // { otp, validTill },
+      // { upsert: true }
+    )
+
+
+
+   
+
     const otp = otpGenerator.generate(4, {
       lowerCaseAlphabets: false,
       upperCaseAlphabets: false,
@@ -261,11 +274,17 @@ export const sendOtpController = async (req, res) => {
       otp,
     })
 
-    await Verifications.findOneAndUpdate(
+     await Verifications.findOneAndUpdate(
       { email: requestData.email },
       { otp, validTill },
       { upsert: true }
     )
+
+    
+
+   
+
+
 
     res
       .status(httpStatus.OK)
@@ -393,14 +412,26 @@ export const resetPasswordController = async(req, res) => {
 
 
 
-export const sendVerificationEmailOtp = async(req , res)=>{
-   try {
+export const sendVerificationEmailOtp = async (req, res) => {
+    try {
         const validatedData = matchedData(req);
         const { companyName, email } = validatedData;
 
         const sellerExists = await Seller.findOne({ email }).lean();
         if (sellerExists) {
             throw buildErrorObject(httpStatus.CONFLICT, 'Seller already registered with this email');
+        }
+
+        let verification = await SellerVerification.findOne({ email });
+        
+        if (verification && verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60)); // minutes
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
         }
 
         const sessionToken = uuidv4();
@@ -412,21 +443,26 @@ export const sendVerificationEmailOtp = async(req , res)=>{
             digits: true
         });
 
-        const verification = await SellerVerification.findOneAndUpdate(
+        const updateData = {
+            companyName,
+            email,
+            emailOtp: parseInt(emailOtp),
+            emailOtpExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+            sessionToken,
+            currentStep: 'email_verification'
+        };
+
+        if (!verification || !verification.isVerificationBlocked()) {
+            updateData.emailOtpAttempts = 0;
+        }
+
+        verification = await SellerVerification.findOneAndUpdate(
             { email },
-            {
-                companyName,
-                email,
-                emailOtp: parseInt(emailOtp),
-                emailOtpExpiry: new Date(Date.now() + 10 * 60 * 1000),
-                emailOtpAttempts: 0,
-                sessionToken,
-                currentStep: 'email_verification'
-            },
+            updateData,
             { upsert: true, new: true }
         );
 
-        console.log(verification)
+        console.log(verification);
 
         await sendMail(email, 'send-email-otp.ejs', {
             otp: emailOtp,
@@ -435,10 +471,10 @@ export const sendVerificationEmailOtp = async(req , res)=>{
         });
 
         res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK,  {
+            buildResponse(httpStatus.OK, {
                 sessionToken,
                 step: 'email_verification',
-                email: email.replace(/(.{2}).*(@.*)/, '$1***$2') 
+                email: email.replace(/(.{2}).*(@.*)/, '$1***$2')
             })
         );
 
@@ -448,47 +484,76 @@ export const sendVerificationEmailOtp = async(req , res)=>{
 }
 
 
-export const verifyEmailOtp = async(req , res)=>{
-  try{
-    const validatedData = matchedData(req)
-   const {otp , sessionToken}=validatedData
-   const verification = await SellerVerification.findOne({sessionToken})
-   if(!verification){
-     throw buildErrorObject(httpStatus.NOT_FOUND , 'No session found. Please resend the OTP')
-   }
-   if(verification.emailOtpVerified){
-     throw buildErrorObject(httpStatus.BAD_REQUEST , 'Email already verified')
-   }
+export const verifyEmailOtp = async (req, res) => {
+    try {
+        const validatedData = matchedData(req);
+        const { otp, sessionToken } = validatedData;
 
-   if(verification.emailOtpExpiry < new Date()){
-     throw buildErrorObject(httpStatus.UNAUTHORIZED , 'OTP expired. Please resend the OTP')
-   }
-   if(verification.emailOtp !== parseInt(otp)){
-     throw buildErrorObject(httpStatus.UNAUTHORIZED , 'Invalid OTP')
-   }
-   verification.emailOtpVerified = true
+        const verification = await SellerVerification.findOne({ sessionToken });
+        
+        if (!verification) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'No session found. Please resend the OTP');
+        }
 
-    verification.currentStep = 'phone_verification'
+        if (verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60)); // minutes
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
+        }
 
-      verification.isEmailVerified = true;
+        if (verification.emailOtpVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Email already verified');
+        }
+
+        if (verification.emailOtpExpiry < new Date()) {
+            throw buildErrorObject(httpStatus.UNAUTHORIZED, 'OTP expired. Please resend the OTP');
+        }
+
+        if (verification.emailOtp !== parseInt(otp)) {
+            verification.emailOtpAttempts += 1;
+            verification.totalFailedAttempts += 1;
+
+            if (verification.emailOtpAttempts >= 5) {
+                verification.blockVerification('email_attempts');
+                await verification.save();
+                
+                throw buildErrorObject(
+                    httpStatus.TOO_MANY_REQUESTS, 
+                    'Too many failed email verification attempts. Your entire verification process has been temporarily locked for 30 minutes'
+                );
+            }
+
+            await verification.save();
+            
+            const remainingAttempts = 5 - verification.emailOtpAttempts;
+            throw buildErrorObject(
+                httpStatus.UNAUTHORIZED, 
+                `Invalid OTP. ${remainingAttempts} attempts remaining before verification is blocked`
+            );
+        }
+
+        verification.emailOtpVerified = true;
+        verification.isEmailVerified = true;
         verification.currentStep = 'phone_verification';
         verification.emailOtpAttempts = 0; 
-        console.log(verification)
 
-      await verification.save();   
+        console.log(verification);
+        await verification.save();
 
-    // Respond with session token and next step
-        
-        
         res.status(httpStatus.OK).json(
-      buildResponse(httpStatus.OK , {
-        step: 'phone_verification',
-        sessionToken: verification.sessionToken
-      })
-    )
-  }catch(err){
-    handleError(res , err)
-  }
+            buildResponse(httpStatus.OK, {
+                step: 'phone_verification',
+                sessionToken: verification.sessionToken
+            })
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
 }
 
 
@@ -497,11 +562,33 @@ export const sendPhoneNumberOtp = async(req , res)=>{
        const validatedData = matchedData(req);
         const { sessionToken, phoneNumber, password } = validatedData;
     console.log(phoneNumber)
+
+
+   
+        
+        const phoneBlockStatus = await SellerVerification.isPhoneBlocked(phoneNumber);
+        if (phoneBlockStatus.isBlocked) {
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `This phone number is temporarily blocked due to ${phoneBlockStatus.reason}. Please try again after ${phoneBlockStatus.remainingTime} minutes`
+            );
+        }
+
         const verification = await SellerVerification.findOne({ sessionToken });
 
         console.log(verification)
         if (!verification) {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
+        }
+
+        if (verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60));
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
         }
 
         if (verification.currentStep !== 'phone_verification') {
@@ -512,7 +599,7 @@ export const sendPhoneNumberOtp = async(req , res)=>{
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Please verify your email first.');
         }
 
-        const sellerExists = await Seller.findOne({ phoneNumber }).lean();
+        const sellerExists = await Seller.findOne({ phone:phoneNumber }).lean();
         if (sellerExists) {
             throw buildErrorObject(httpStatus.CONFLICT, 'Seller already registered with this phone number');
         }
@@ -538,7 +625,6 @@ export const sendPhoneNumberOtp = async(req , res)=>{
 
         await sendTextMessage(phoneNumber, phoneOtp , body);
 
-
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK , {
                 sessionToken,
@@ -550,7 +636,6 @@ export const sendPhoneNumberOtp = async(req , res)=>{
     handleError(res , err)
   }
 }
-
 
 export const verifyPhoneNumberOtp = async(req , res)=>{
 try {
@@ -564,6 +649,24 @@ try {
 
         console.log(verification)
 
+        const phoneBlockStatus = await SellerVerification.isPhoneBlocked(verification.phoneNumber);
+        if (phoneBlockStatus.isBlocked) {
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `This phone number is temporarily blocked. Please try again after ${phoneBlockStatus.remainingTime} minutes`
+            );
+        }
+
+        if (verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60));
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
+        }
+
         if (verification.currentStep !== 'phone_verification') {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid step in signup flow.');
         }
@@ -576,40 +679,65 @@ try {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'OTP expired. Please request a new one.');
         }
 
-        if (verification.phoneOtpAttempts >= 5) {
-            throw buildErrorObject(httpStatus.TOO_MANY_REQUESTS, 'Too many invalid attempts. Please start signup again.');
-        }
-
         if (parseInt(verification.phoneNumberOtp) !== parseInt(otp)) {
             verification.phoneOtpAttempts += 1;
+            verification.totalFailedAttempts += 1;
+
+            if (verification.phoneOtpAttempts >= 5) {
+                verification.blockVerification('phone_attempts');
+                
+                await SellerVerification.blockPhoneNumber(verification.phoneNumber, 'too_many_attempts');
+                
+                await verification.save();
+                
+                throw buildErrorObject(
+                    httpStatus.TOO_MANY_REQUESTS, 
+                    'Too many failed phone verification attempts. This phone number and verification session have been temporarily locked for 30 minutes'
+                );
+            }
+
             await verification.save();
-            throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Invalid OTP');
+            
+            const remainingAttempts = 5 - verification.phoneOtpAttempts;
+            throw buildErrorObject(
+                httpStatus.UNAUTHORIZED, 
+                `Invalid OTP. ${remainingAttempts} attempts remaining before verification is blocked`
+            );
         }
         
-
         const newSeller = new Seller({
             companyName: verification.companyName,
             email: verification.email,
             phone: verification.phoneNumber,
             password: verification.password,
-          
         });
+
+
+
+        await StoreClaimUsers.updateMany({
+          $or:[
+            {email:verification.email},
+            {phoneNumber:verification.phoneNumber}
+          ]
+        } , 
+      {
+        $set:{
+          isClaimed:true
+        }
+      })
 
         await newSeller.save();
 
         verification.isPhoneNumberVerified = true;
         verification.currentStep = 'completed';
+        verification.resetAllAttempts();
         await verification.save();
-
 
         res.status(httpStatus.CREATED).json(
             buildResponse(httpStatus.CREATED, 
                'Seller registered successfully',
             )
         );
-
-
-
 
   }catch(err){
     handleError(res , err)
@@ -624,6 +752,25 @@ export const resendEmailOtp = async (req, res) => {
         const verification = await SellerVerification.findOne({ sessionToken });
         if (!verification) {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session. Please start signup again.');
+        }
+
+
+        if (verification.currentStep !== 'email_verification') {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Email verification already completed or invalid step.');
+        }
+
+        if (verification.isEmailVerified) {
+            throw buildErrorObject(httpStatus.BAD_REQUEST, 'Email already verified. Please proceed to phone verification.');
+        }
+
+        if (verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60));
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
         }
 
         const emailOtp = otpGenerator.generate(4, {
@@ -661,6 +808,24 @@ export const resendPhoneOtp = async (req, res) => {
         const verification = await SellerVerification.findOne({ sessionToken });
         if (!verification || verification.currentStep !== 'phone_verification') {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'Invalid session or step.');
+        }
+
+        const phoneBlockStatus = await SellerVerification.isPhoneBlocked(verification.phoneNumber);
+        if (phoneBlockStatus.isBlocked) {
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `This phone number is temporarily blocked. Please try again after ${phoneBlockStatus.remainingTime} minutes`
+            );
+        }
+
+        if (verification.isVerificationBlocked()) {
+            const blockedUntil = verification.blockedUntil;
+            const remainingTime = Math.ceil((blockedUntil - new Date()) / (1000 * 60));
+            const blockReason = verification.blockReason === 'email_attempts' ? 'email verification' : 'phone verification';
+            throw buildErrorObject(
+                httpStatus.TOO_MANY_REQUESTS, 
+                `Verification process blocked due to too many failed attempts in ${blockReason}. Please try again after ${remainingTime} minutes`
+            );
         }
 
         const phoneOtp = otpGenerator.generate(4, {
