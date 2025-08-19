@@ -8,6 +8,19 @@ export const validateSyncProductPricing = [
         .withMessage('Product ID should be a mongoose ID'),
 
     // quantityPriceTiers is optional and allows empty arrays
+
+    check('unitPrice')
+        .exists({ checkFalsy: true })
+        .withMessage('Unit price is required')
+        .isNumeric()
+        .withMessage('Unit price must be a number')
+        .custom(value => {
+            if (value < 0) {
+                throw new Error('Unit price cannot be negative');
+            }
+            return true;
+        }),
+
     check('quantityPriceTiers')
         .optional()
         .custom((value) => {
@@ -141,38 +154,33 @@ export const validateSyncProductPricing = [
             return true;
         }),
 
-    // minPrice is REQUIRED
     check('minPrice')
-        .exists()
-        .withMessage('Please provide a minimum price for negotiation')
-        .notEmpty()
-        .withMessage('Please provide a minimum price for negotiation')
-        .isNumeric()
-        .withMessage('Minimum price must be a number')
-        .custom(value => {
-            if (Number(value) <= 0) {
-                throw new Error('Minimum price must be greater than 0');
-            }
-            return true;
-        }),
+    .optional() 
+    .isNumeric()
+    .withMessage('Minimum price must be a number')
+    .custom((value, { req }) => {
+      if (Number(value) <= 0) {
+        throw new Error('Minimum price must be greater than 0');
+      }
+      if (req.body.maxPrice === undefined) {
+        throw new Error('Maximum price is required when minimum price is provided');
+      }
+      return true;
+    }),
 
-    // maxPrice is REQUIRED
-    check('maxPrice')
-        .exists()
-        .withMessage('Please provide a maximum price for negotiation')
-        .notEmpty()
-        .withMessage('Please provide a maximum price for negotiation')
-        .isNumeric()
-        .withMessage('Maximum price must be a number')
-        .custom((value, { req }) => {
-            if (Number(value) <= 0) {
-                throw new Error('Maximum price must be greater than 0');
-            }
-            if (req.body.minPrice !== undefined && Number(value) <= Number(req.body.minPrice)) {
-                throw new Error('Maximum price must be greater than minimum price');
-            }
-            return true;
-        }),
+  check('maxPrice')
+    .optional() 
+    .isNumeric()
+    .withMessage('Maximum price must be a number')
+    .custom((value, { req }) => {
+      if (Number(value) <= 0) {
+        throw new Error('Maximum price must be greater than 0');
+      }
+      if (req.body.minPrice !== undefined && Number(value) <= Number(req.body.minPrice)) {
+        throw new Error('Maximum price must be greater than minimum price');
+      }
+      return true;
+    }),
 
     (req, res, next) => validateRequest(req, res, next)
 ];

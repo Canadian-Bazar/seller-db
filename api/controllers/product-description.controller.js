@@ -60,7 +60,9 @@ export const syncProductDescriptionImagesController = async (req, res) => {
 
         console.log('Request Files:', validatedData.images);
 
-        const clientImages = validatedData.images 
+        const clientImages = validatedData.images || []
+
+        console.log("clientImages" , clientImages)
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {

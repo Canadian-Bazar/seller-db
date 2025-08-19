@@ -30,7 +30,6 @@ export const requireAuth =(req , res , next)=>{
 
 
 
-    console.log("token" , token)
     if(!token){
       throw buildErrorObject(httpStatus.UNAUTHORIZED , 'UNAUTHORIZED')
     }

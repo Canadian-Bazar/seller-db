@@ -5,6 +5,12 @@ import buildResponse from '../utils/buildResponse.js'
 import handleError from '../utils/handleError.js'
 import mongoose from 'mongoose'
 import httpStatus from 'http-status'
+import ProductStats from '../models/products-stats.schema.js'
+import ProductPricing from '../models/product-pricing.schema.js'
+import ProductDescription from '../models/product-description.schema.js'
+import ProductAttributes from '../models/product-attributes.schema.js'
+
+import ProductVariation from '../models/product-variation.schema.js'
 
 
 
@@ -200,6 +206,46 @@ export const getProductNamesController = async (req, res) => {
     return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK ,  hresponse));
   } catch (err) {
     return handleError(res, err);
+  }
+};
+
+
+
+
+export const deleteProductController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+    const { productId } = validatedData;
+
+    const product = await Products.findOne({_id:productId , seller:req.user._id});
+
+    if (!product) {
+      throw buildErrorObject(httpStatus.NOT_FOUND, 'Product not found');
+    }
+
+
+    if(parseInt(product.completionPercentage) === 100){
+      throw buildErrorObject(httpStatus.BAD_REQUEST, 'Product is complete and cannot be deleted');
+    }
+
+
+
+    await Promise.all([
+      Products.findByIdAndDelete(productId),
+      ProductStats.findOneAndDelete({ productId }),
+      ProductPricing.findOneAndDelete({ productId }),
+      ProductDescription.findOneAndDelete({ productId }),
+      ProductAttributes.findOneAndDelete({ productId }),
+      ProductVariation.findOneAndDelete({ productId })
+    ]);
+    
+
+
+      res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, 'Product deleted successfully'));
+
+ 
+  } catch (err) {
+    handleError(res, err);
   }
 };
 

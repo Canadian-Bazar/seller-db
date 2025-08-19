@@ -14,7 +14,7 @@ export const syncProductPricingController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
         const { productId } = req.params;
-        const {  quantityPriceTiers, leadTime  , minPrice , maxPrice } = validatedData;
+        const {  quantityPriceTiers, leadTime  , minPrice , maxPrice , unitPrice } = validatedData;
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {
@@ -42,13 +42,19 @@ export const syncProductPricingController = async (req, res) => {
         );
 
 
-        await Products.findByIdAndUpdate(
+      const product = await Products.findByIdAndUpdate(
             productId,
             {
                 minPrice: minPrice || 0,
-                maxPrice: maxPrice || 0
+                maxPrice: maxPrice || 0 ,
+                unitPrice: unitPrice || 0 ,
+            } , {
+                upsert: true ,
+                new: true ,
+                runValidators: true 
             }
         );
+        console.log("product" , product)
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, 'Pricing synchronized successfully', {
@@ -77,13 +83,14 @@ export const getProductPricingController = async (req, res) => {
         }
 
         const pricing = await ProductPricing.findOne({ productId: productId });
-        const product = await Products.findById(productId).select('minPrice maxPrice');
+        const product = await Products.findById(productId).select('minPrice maxPrice unitPrice');
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, {
                 ...pricing?.toObject(),
                 minPrice: product?.minPrice || 0,
-                maxPrice: product?.maxPrice || 0
+                maxPrice: product?.maxPrice || 0  ,
+                unitPrice: product?.unitPrice || 0 
             })
         );
 

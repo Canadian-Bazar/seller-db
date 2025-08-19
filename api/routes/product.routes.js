@@ -25,5 +25,15 @@ router.get(
     productsControllers.getProductNamesController
 )
 
+router.delete(
+  '/:productId' ,
+  productValidators.validateDeleteProduct ,
+  productsControllers.deleteProductController
+)
+
+
+
+
+
 
     export default router

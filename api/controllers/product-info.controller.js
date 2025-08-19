@@ -294,7 +294,7 @@ export const createProductController = async (req, res) => {
             
             isComplete: false,
             completionPercentage: 0,
-            incompleteSteps: ['productInfo', 'attributes', 'images', 'pricing', 'services'],
+            incompleteSteps: ['productInfo', 'attributes', 'images', 'pricing'],
             stepStatus: {
                 productInfo: false,
                 attributes: false,

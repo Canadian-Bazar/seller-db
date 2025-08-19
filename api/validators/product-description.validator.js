@@ -1,4 +1,5 @@
-import { check , query , param } from "express-validator"
+
+import { check, query, param } from "express-validator"
 import validateRequest from "../utils/validateRequest.js"
 
 
@@ -18,6 +19,11 @@ export const validateSyncProductDescription = [
         .isString()
         .withMessage('Each image must be a string URL'),
 
+    check('points')
+        .optional()
+        .isArray()
+        .withMessage('Points must be an array'),
+
     check('points.*')
         .if(check('points').isArray({ min: 1 }))
         .isString()
@@ -27,9 +33,10 @@ export const validateSyncProductDescription = [
         .withMessage('Each point must be between 1 and 500 characters'),
 
     check('attributes')
-        .optional()
-        .isArray()
-        .withMessage('Attributes must be an array'),
+        .exists({ checkFalsy: true })
+        .withMessage('Attributes field is required')
+        .isArray({ min: 1 })
+        .withMessage('Attributes must be a non-empty array'),
 
     check('attributes.*.field')
         .if(check('attributes').isArray({ min: 1 }))
@@ -51,9 +58,7 @@ export const validateSyncProductDescription = [
         .isLength({ min: 1, max: 500 })
         .withMessage('Attribute value must be between 1 and 500 characters'),
 
-        (req , res , next)=>validateRequest(req , res , next)
-
-
+    (req, res, next) => validateRequest(req, res, next)
 ]
 
 

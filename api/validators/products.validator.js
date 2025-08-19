@@ -1,4 +1,7 @@
-import{query , check} from 'express-validator'
+
+
+
+import{query , check ,param} from 'express-validator'
 import { paginationValidator } from './pagination.validator.js'
 import validateRequest from '../utils/validateRequest.js'
 
@@ -62,4 +65,17 @@ export const validatedGetProducst =[
 export const validateGetProductNames =[
   ...paginationValidator ,
   (req , res , next)=>validateRequest(req , res, next)
+]
+
+
+
+
+export const validateDeleteProduct =[
+  param('productId')
+  .exists({checkFalsy:true})
+  .isMongoId()
+  .withMessage('Product ID is required')
+  .notEmpty()
+  .withMessage('Product ID is required') ,
+  (req , res , next)=>validateRequest(req , res , next)
 ]

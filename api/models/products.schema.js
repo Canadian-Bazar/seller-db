@@ -37,6 +37,7 @@ const ProductSchema = new mongoose.Schema({
       index: true
     },
     images: [String],
+    videos:[String] ,
     
     about: [String],
     
@@ -46,7 +47,7 @@ const ProductSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductDescription'
     },
-    minPrice:{
+    unitPrice:{
       type:Number ,
     } ,
     maxPrice:{

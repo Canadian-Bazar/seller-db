@@ -1,41 +1,39 @@
-import express from 'express'
-import trimRequest from 'trim-request'
-import { requireAuth } from '../middlewares/auth.middleware.js'
-import * as productImagesControllers from '../controllers/product-images.controller.js'
-import * as productImageValidators from '../validators/product-images.validator.js'
-import multer from 'multer'
-
-
+import express from 'express';
+import trimRequest from 'trim-request';
+import { requireAuth } from '../middlewares/auth.middleware.js';
+import * as productImagesControllers from '../controllers/product-images.controller.js';
+import * as productImageValidators from '../validators/product-images.validator.js';
+import multer from 'multer';
 
 const upload = multer({
-  dest: 'uploads/', 
-})
+  dest: 'uploads/',
+});
 
+const router = express.Router();
 
-
-
-
-const router = express.Router()
-
-
-router.use(trimRequest.all) ,
-router.use(requireAuth)
-
+(router.use(trimRequest.all), router.use(requireAuth));
 
 router.get(
-    '/:productId' ,
+  '/:productId',
 
-    productImageValidators.validateGetImages ,
-    productImagesControllers.getProductImages
-)
-
+  productImageValidators.validateGetImages,
+  productImagesControllers.getProductImages,
+);
 
 router.post(
-    '/:productId' ,
-     upload.array('files' , 10) ,
-    productImageValidators.validateSyncImages ,
-    productImagesControllers.syncImagesControllers
-)
+  '/:productId',
+  upload.fields([
+    { name: 'imageFiles', maxCount: 10 },
+    { name: 'videoFiles', maxCount: 10 },
+  ]),
 
+  (req, res, next) => {
+    console.log('videoFiles', req.files);
 
-export default router
+    next();
+  },
+  productImageValidators.validateSyncImages,
+  productImagesControllers.syncImagesControllers,
+);
+
+export default router;
