@@ -31,7 +31,7 @@ const SerivesProcessAndCapabilitySchema = new mongoose.Schema({
 
     tolerance:{
         type:Number ,
-        required:true
+        default:null ,
     }
 
 

@@ -21,7 +21,7 @@ export const createServiceController = async (req, res) => {
             
             isComplete: false,
             completionPercentage: 0,
-            incompleteSteps: ['serviceInfo', 'capabilities', 'pricing', 'customization', 'media' ,'order'],
+            incompleteSteps: ['serviceInfo', 'capabilities', 'media' ,'order'],
             stepStatus: {
                 serviceInfo: false,
                 capabilities: false,

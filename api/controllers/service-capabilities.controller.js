@@ -11,7 +11,7 @@ export const syncServiceCapabilitiesController = async (req, res) => {
     try {
         const validatedData = matchedData(req);
         const { serviceId } = validatedData;
-        const { processType, materialsSupported, surfaceFinishAndCoatings, tolerance } = validatedData;
+        const { processType, materialsSupported, surfaceFinishAndCoatings =[], tolerance=null } = validatedData;
 
         // Check if service exists
         const serviceExists = await Services.exists({ _id: serviceId });

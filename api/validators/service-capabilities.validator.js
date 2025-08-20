@@ -31,10 +31,9 @@ export const validateSyncServiceCapabilities = [
         .withMessage('Each material must be between 1 and 100 characters'),
 
     check('surfaceFinishAndCoatings')
-        .exists({ checkFalsy: true })
-        .withMessage('Surface finish and coatings is required')
-        .isArray({ min: 1 })
-        .withMessage('Surface finish and coatings must be a non-empty array'),
+        .optional()
+        .isArray()
+        .withMessage('Surface finish and coatings must an array'),
 
     check('surfaceFinishAndCoatings.*')
         .if(check('surfaceFinishAndCoatings').isArray({ min: 1 }))
@@ -45,8 +44,7 @@ export const validateSyncServiceCapabilities = [
         .withMessage('Each surface finish must be between 1 and 100 characters'),
 
     check('tolerance')
-        .exists({ checkFalsy: true })
-        .withMessage('Tolerance is required')
+        .optional()
         .isNumeric()
         .withMessage('Tolerance must be a number')
         .custom(value => {

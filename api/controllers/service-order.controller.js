@@ -11,7 +11,7 @@ export const syncServiceOrderController = async (req, res) => {
     try {
         const validatedData = matchedData(req);
         const { serviceId } = req.params;
-        const { moq, standardLeadTime, rushOptions } = validatedData;
+        const { moq=null, standardLeadTime, rushOptions =[] } = validatedData;
 
         // Check if service exists
         const serviceExists = await Services.exists({ _id: serviceId });

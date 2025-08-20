@@ -13,8 +13,7 @@ const ServiceOrderSchema = new mongoose.Schema({
 
     moq:{
         type:Number ,
-        required:true ,
-        default:1
+        default:null
     } ,
 
     standardLeadTime:{

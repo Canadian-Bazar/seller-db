@@ -27,12 +27,10 @@ const ServiceMediaSchema = new mongoose.Schema({
         {
             duration:{
                 type:Number ,
-                required:true
             } ,
 
             unit:{
                 type:String ,
-                required:true
             
             } ,
         } ,
@@ -43,6 +41,11 @@ const ServiceMediaSchema = new mongoose.Schema({
                 required:true
             }
         ] ,
+
+
+        brochure:{
+            type:String
+        }
 
         
     

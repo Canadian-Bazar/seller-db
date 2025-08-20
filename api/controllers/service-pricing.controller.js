@@ -11,7 +11,7 @@ export const syncServicePricingController = async (req, res) => {
     try {
         const validatedData = matchedData(req);
         const { serviceId } = req.params;
-        const { perModelPrice, perHourPrice, perBatchPrice, volume, customQuoteEnabled } = validatedData;
+        const { perModelPrice=null, perHourPrice = null, perBatchPrice = null, volume = null, customQuoteEnabled = false } = validatedData;
 
         // Check if service exists
         const serviceExists = await Services.exists({ _id: serviceId });

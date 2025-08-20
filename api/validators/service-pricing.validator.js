@@ -40,18 +40,17 @@ export const validateSyncServicePricing = [
             return true;
         }),
 
-    check('volume')
-    .exists({ checkFalsy: true })
-    .withMessage('Volume is required')
-    
-        .isNumeric()
-        .withMessage('Volume price must be a number')
-        .custom(value => {
-            if (value < 0) {
-                throw new Error('Volume price cannot be negative');
-            }
-            return true;
-        }),
+        check('volume')
+            .optional()
+            .isNumeric()
+            .withMessage('Volume price must be a number')
+            .custom(value => {
+                if (value < 0) {
+                    throw new Error('Volume price cannot be negative');
+                }
+                return true;
+            }),
+
 
     check('customQuoteEnabled')
         .optional()

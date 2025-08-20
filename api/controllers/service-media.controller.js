@@ -11,7 +11,7 @@ export const syncServiceMediaController = async (req, res) => {
     try {
         const validatedData = matchedData(req);
         const { serviceId } = req.params;
-        const { images, videos, warranty, industryCertifications } = validatedData;
+        const { images, videos=[], warranty={}, industryCertifications = [] } = validatedData;
 
         // Check if service exists
         const serviceExists = await Services.exists({ _id: serviceId });

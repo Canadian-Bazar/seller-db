@@ -20,7 +20,6 @@ const ServiceSchema = new mongoose.Schema({
         required: true
     },
 
-    // Completion tracking - same pattern as products
     isComplete: { 
         type: Boolean, 
         default: false,
@@ -36,16 +35,16 @@ const ServiceSchema = new mongoose.Schema({
     
     incompleteSteps: [{
         type: String,
-        enum: ['serviceInfo', 'capabilities', 'order', 'pricing', 'customization', 'media']
+        enum: ['serviceInfo', 'capabilities', 'order', 'media']
     }],
     
     stepStatus: {
-        serviceInfo: { type: Boolean, default: false },     // Basic service info
-        capabilities: { type: Boolean, default: false },   // Technical capabilities & processes
-        order: { type: Boolean, default: false },      // Service portfolio/examples
-        pricing: { type: Boolean, default: false },        // Pricing structure
-        customization: { type: Boolean, default: false },  // Customization options
-        media: { type: Boolean, default: false }           // Images, videos, certifications
+        serviceInfo: { type: Boolean, default: false },     
+        capabilities: { type: Boolean, default: false },  
+        order: { type: Boolean, default: false },     
+        pricing: { type: Boolean, default: false },        
+        customization: { type: Boolean, default: false },  
+        media: { type: Boolean, default: false }           
     },
 
 }, { timestamps: true, collection: "Service" });

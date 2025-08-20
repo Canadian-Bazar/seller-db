@@ -13,7 +13,6 @@ const ServiceCustomizationSchema = new mongoose.Schema({
     } ,
     designImages:[{
         type:String ,
-        required:true
     
     }]
      ,
@@ -21,14 +20,12 @@ const ServiceCustomizationSchema = new mongoose.Schema({
 
      logo:{
         type:String ,
-        required:true
 
      } ,
 
      colorChoices:[
         {
             type:String ,
-            required:true
         }
      
      ] ,

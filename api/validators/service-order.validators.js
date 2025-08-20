@@ -8,8 +8,7 @@ export const validateSyncServiceOrder = [
         .withMessage('Service ID should be a mongoose ID'),
 
     check('moq')
-        .exists({ checkFalsy: true })
-        .withMessage('Minimum order quantity is required')
+        .optional()
         .isInt({ min: 1 })
         .withMessage('MOQ must be a number greater than or equal to 1'),
 
@@ -41,10 +40,9 @@ export const validateSyncServiceOrder = [
         .withMessage('Standard lead time unit must be between 1 and 50 characters'),
 
     check('rushOptions')
-        .exists({ checkFalsy: true })
-        .withMessage('Rush options are required')
-        .isArray({ min: 1 })
-        .withMessage('Rush options must be a non-empty array'),
+        .optional()
+        .isArray()
+        .withMessage('Rush options must be an array'),
 
     check('rushOptions.*.min')
         .if(check('rushOptions').isArray({ min: 1 }))

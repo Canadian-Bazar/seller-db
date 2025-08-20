@@ -11,7 +11,7 @@ export const syncServiceCustomizationController = async (req, res) => {
     try {
         const validatedData = matchedData(req);
         const { serviceId } = req.params;
-        const { designImages, logo, colorChoices, rapidPrototype } = validatedData;
+        const { designImages =[], logo=null, colorChoices=[], rapidPrototype=false } = validatedData;
 
         // Check if service exists
         const serviceExists = await Services.exists({ _id: serviceId });

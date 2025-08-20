@@ -7,10 +7,10 @@ const ServicePricingSchema = new mongoose.Schema({
         required: true
     },
 
-    perModelPrice: {type:Number},
-    perHourPrice: {type:Number}, 
-    perBatchPrice: {type:Number},
-    volume: {type:Number , required:true},
+    perModelPrice: {type:Number  , default:null},
+    perHourPrice: {type:Number , default:null}, 
+    perBatchPrice: {type:Number , default:null},
+    volume: {type:Number , default:null},
     customQuoteEnabled: {type:Boolean , default:false}
 
 }, { 
