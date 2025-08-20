@@ -25,6 +25,7 @@ export const syncImagesControllers = async (req, res) => {
 
     const existingImages = existingProduct.images || [];
     const existingVideos = existingProduct.videos || [];
+    const brochureFile = req?.files?.brochureFile || req?.files?.['brochureFile[]'];
 
     // Multer fields: support both name and name[]
     const imageFiles = [
@@ -48,6 +49,8 @@ export const syncImagesControllers = async (req, res) => {
       );
     }
 
+    let brochureUrl = validatedData.brochure || null;
+
     const validExistingImages = existingImages.filter((img) =>
       clientImages.includes(img),
     );
@@ -69,9 +72,16 @@ export const syncImagesControllers = async (req, res) => {
       updatedVideos = [...updatedVideos, ...newVideoUrls];
     }
 
+    if (brochureFile && brochureFile.length > 0) {
+
+      console.log('brochureFile', brochureFile);
+      const urls = await uploadFile(brochureFile);
+      brochureUrl = urls[0];
+    }
+
     await Products.findOneAndUpdate(
       { _id: productId, seller: userId },
-      { $set: { images: updatedImages, videos: updatedVideos } },
+      { $set: { images: updatedImages, videos: updatedVideos , brochure: brochureUrl } },
     );
 
     await markStepCompleteAsync(productId, 'images');
@@ -91,12 +101,13 @@ export const getProductImages = async (req, res) => {
     const productId = validatedData.productId;
 
     const productMedia =
-      await Products.findById(productId).select('images videos');
+      await Products.findById(productId).select('images videos brochure');
 
     res.status(httpStatus.OK).json(
       buildResponse(httpStatus.OK, {
         images: productMedia.images,
         videos: productMedia.videos,
+        brochure: productMedia.brochure,
       }),
     );
   } catch (err) {

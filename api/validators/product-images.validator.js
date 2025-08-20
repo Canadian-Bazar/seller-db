@@ -42,6 +42,13 @@ export const validateSyncImages = [
     .notEmpty()
     .withMessage('Each video must be a non-empty string'),
 
+
+
+  check('brochure')
+    .optional()
+    .isString()
+    .withMessage('Brochure must be a non-empty string URL') ,
+
   (req, res, next) => validateRequest(req, res, next),
 ];
 

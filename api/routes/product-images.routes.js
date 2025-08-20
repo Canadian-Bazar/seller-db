@@ -25,6 +25,7 @@ router.post(
   upload.fields([
     { name: 'imageFiles', maxCount: 10 },
     { name: 'videoFiles', maxCount: 10 },
+    {name : 'brochureFile', maxCount: 1}
   ]),
 
   (req, res, next) => {

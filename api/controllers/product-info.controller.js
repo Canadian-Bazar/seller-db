@@ -378,7 +378,7 @@ export const getProductInfoController = async (req, res) => {
 
         const product = await Products.findOne(
             { _id: productId, seller: userId }
-        ).select('name slug categoryId about moq completionPercentage incompleteSteps stepStatus')
+        ).select('name slug categoryId about moq completionPercentage incompleteSteps stepStatus brochure')
          .populate('categoryId', 'name');
 
         if (!product) {
