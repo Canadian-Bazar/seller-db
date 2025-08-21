@@ -131,70 +131,75 @@ export const updateWebsiteProjectReportController = async (req, res) => {
 };
 
 
+
+
 export const getCurrentProjectStatusController = async (req, res) => {
   try {
     const validatedData = matchedData(req);
-    const sellerId = req.user._id; // Get from authenticated user
+    const sellerId = req.user._id; 
 
-    // Find the most recent project for the seller
-    const currentProject = await WebsiteProject.findOne({ 
-      seller: sellerId 
-    })
-    .populate({
-      path: 'websiteQuotation',
-      select: 'domainName referenceurl referenceWebTemplates itemsSold additionalDetails',
-      populate: {
-        path: 'referenceWebTemplates',
-        select: 'name url'
+    let currentProject = await WebsiteProject.findOne({ seller: sellerId })
+      .populate({
+        path: "websiteQuotation",
+        select:
+          "domainName referenceurl referenceWebTemplates itemsSold additionalDetails",
+        populate: {
+          path: "referenceWebTemplates",
+          select: "name url",
+        },
+      })
+      .populate("websiteDocumentation")
+      .populate("selectedPlan.subscriptionPlanVersionId")
+      .populate("transactionId")
+      .sort({ createdAt: -1 }) 
+      .lean();
+
+    if (currentProject) {
+      let statusMessage = "";
+      switch (currentProject.projectStatus) {
+        case "initiated":
+          statusMessage = "Project has been initiated. Waiting for documentation.";
+          break;
+        case "documentation_created":
+          statusMessage = "Documentation has been created. Please select a plan.";
+          break;
+        case "plan_selected":
+          statusMessage = "Plan has been selected. Please complete payment.";
+          break;
+        case "payment_completed":
+          statusMessage = "Payment completed. Project will start soon.";
+          break;
+        case "in_progress":
+          statusMessage = `Project is in progress. ${
+            currentProject.percentageCompletion || 0
+          }% completed.`;
+          break;
+        case "completed":
+          statusMessage = "Project has been completed successfully.";
+          break;
+        case "cancelled":
+          statusMessage = "Project has been cancelled.";
+          break;
+        default:
+          statusMessage = "Project status unknown.";
       }
-    })
-    .populate('websiteDocumentation')
-    .populate('selectedPlan.subscriptionPlanVersionId')
-    .populate('transactionId')
-    .sort({ createdAt: -1 }) // Get the most recent project
-    .lean();
 
-    if (!currentProject) {
-      throw buildErrorObject(httpStatus.NOT_FOUND, 'No project found for this seller');
+      return res
+        .status(httpStatus.OK)
+        .json(buildResponse(httpStatus.OK, { ...currentProject, statusMessage }));
     }
 
-    // Add status message based on current status
-    let statusMessage = "";
-    switch (currentProject.projectStatus) {
-      case 'initiated':
-        statusMessage = "Project has been initiated. Waiting for documentation.";
-        break;
-      case 'documentation_created':
-        statusMessage = "Documentation has been created. Please select a plan.";
-        break;
-      case 'plan_selected':
-        statusMessage = "Plan has been selected. Please complete payment.";
-        break;
-      case 'payment_completed':
-        statusMessage = "Payment completed. Project will start soon.";
-        break;
-      case 'in_progress':
-        statusMessage = `Project is in progress. ${currentProject.percentageCompletion || 0}% completed.`;
-        break;
-      case 'completed':
-        statusMessage = "Project has been completed successfully.";
-        break;
-      case 'cancelled':
-        statusMessage = "Project has been cancelled.";
-        break;
-      default:
-        statusMessage = "Project status unknown.";
+    const quotationExists = await WebsiteQuotation.findOne({ seller: sellerId });
+    if (quotationExists) {
+      return res
+        .status(httpStatus.OK)
+        .json(buildResponse(httpStatus.OK,  "Your request has been submitted" ));
     }
 
-    const response = {
-      ...currentProject,
-      statusMessage
-    };
-
-    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+    throw buildErrorObject(httpStatus.NOT_FOUND, "No project found for this seller");
   } catch (err) {
     handleError(res, err);
   }
 };
 
-// Validators
+

@@ -35,13 +35,20 @@ export const validateSyncServiceMedia = [
         .isLength({ min: 1 })
         .withMessage('Each video URL cannot be empty'),
 
-    check('warranty')
-        .optional()
-        .isObject()
-        .withMessage('Warranty must be an object'),
+  check("warranty")
+    .optional()
+    .custom((value, { req }) => {
+      if (typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("Warranty must be an object");
+      }
+      if (Object.keys(value).length === 0) {
+        req.body.warranty = null;
+      }
+      return true;
+    }),
 
-    check("warranty.duration")
-    .if(check("warranty").exists()) 
+  check("warranty.duration")
+    .if(check("warranty").custom(w => w && Object.keys(w).length > 0))
     .exists({ checkFalsy: true })
     .withMessage("Warranty duration is required")
     .isNumeric()
@@ -54,7 +61,7 @@ export const validateSyncServiceMedia = [
     }),
 
   check("warranty.unit")
-    .if(check("warranty").exists()) 
+    .if(check("warranty").custom(w => w && Object.keys(w).length > 0))
     .exists({ checkFalsy: true })
     .withMessage("Warranty unit is required")
     .isString()
