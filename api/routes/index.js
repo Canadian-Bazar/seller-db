@@ -32,6 +32,7 @@ import websiteTemplatesRoutes from './wesbite-template.routes.js'
 import websiteDocumentationRoutes from './website-documentation.routes.js'
 import websiteProjectRoutes from './website-project.routes.js'
 import reviewRoutes from './review.routes.js'
+import claimStoreRoutes from './claim-stores.routes.js'
 
 
 
@@ -72,6 +73,7 @@ v1Routes.use('/website-templates' , websiteTemplatesRoutes)
 v1Routes.use('/website-documentation' , websiteDocumentationRoutes)
 v1Routes.use('/website-project' , websiteProjectRoutes)
 v1Routes.use('/reviews' , reviewRoutes)
+v1Routes.use('/claim-stores', claimStoreRoutes)
 
 
 

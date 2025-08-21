@@ -44,7 +44,7 @@ export const validateSyncServiceCapabilities = [
         .withMessage('Each surface finish must be between 1 and 100 characters'),
 
     check('tolerance')
-        .optional()
+        .optional({ nullable: true })
         .isNumeric()
         .withMessage('Tolerance must be a number')
         .custom(value => {

@@ -207,3 +207,54 @@ export const getServicesController = async (req, res) => {
     handleError(res, err);
   }
 };
+
+
+
+
+export const deleteServiceController = async (req, res) => {
+    try {
+
+      const validatedData = matchedData(req);
+      const userId = req.user._id;
+      const { id } = validatedData;
+
+
+
+      const service = await Services.find({ _id: id, seller: userId });
+      if (!service || service.length === 0) {
+        return res.status(httpStatus.NOT_FOUND).json(
+            buildErrorObject(httpStatus.NOT_FOUND, 'Service not found')
+        );
+      }
+
+
+      if(parseInt(service[0].completionPercentage) === 100) {
+        return res.status(httpStatus.BAD_REQUEST).json(
+            buildErrorObject(httpStatus.BAD_REQUEST, 'Cannot delete a completed service')
+        );
+      }
+
+
+        const serviceId = service[0]._id;
+
+
+
+        const deletedService = await Services.findByIdAndDelete(serviceId);
+        if (!deletedService) {
+            return res.status(httpStatus.NOT_FOUND).json(
+                buildErrorObject(httpStatus.NOT_FOUND, 'Service not found')
+            );
+        }
+
+
+        res.status(httpStatus.OK).json(
+            buildResponse(httpStatus.OK, 'Service deleted successfully')
+        );
+
+    } catch (err) {
+        handleError(res, err);
+    }
+}
+
+
+

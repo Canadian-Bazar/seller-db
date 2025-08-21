@@ -97,3 +97,16 @@ export const validateGetServices = [
 
     (req, res, next) => validateRequest(req, res, next)
 ];
+
+
+
+
+export const validateDeleteService = [
+    param('id')
+        .exists()
+        .withMessage('Service ID is required')
+        .isMongoId()
+        .withMessage('Service ID must be a valid MongoDB ObjectId'),    
+
+    (req, res, next) => validateRequest(req, res, next)
+];

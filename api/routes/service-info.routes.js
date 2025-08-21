@@ -37,6 +37,13 @@ router.post(
 )
 
 
+router.delete(
+    '/:id',
+    serviceInfoValidators.validateDeleteService,
+    serviceInfoControllers.deleteServiceController
+)
+
+
 
 
 export default router
