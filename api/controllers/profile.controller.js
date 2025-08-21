@@ -137,8 +137,3 @@ export const updateProfile = async (req, res) => {
     handleError(res, error);
   }
 };
-
-
-
-
-
