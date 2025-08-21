@@ -88,6 +88,15 @@ export const validateGetServices = [
         .isBoolean()
         .withMessage('inComplete must be a boolean'),
 
+
+
+      check('isComplete')
+            .optional()
+            .notEmpty()
+            .withMessage('inComplete paramter should be a boolean')
+            .isBoolean()
+            .withMessage('inComplete must be a boolean'),
+
     check('createdAt')
         .optional()
         .isInt()

@@ -20,13 +20,14 @@ export const validateSyncServiceCustomization = [
         .isLength({ min: 1 })
         .withMessage('Each design image URL cannot be empty'),
 
-    check('logo')
-        .optional()
-        .isString()
-        .withMessage('Logo must be a string URL')
-        .trim()
-        .isLength({ min: 1 })
-        .withMessage('Logo URL cannot be empty'),
+check('logo')
+  .optional({ nullable: true }) 
+  .isString()
+  .withMessage('Logo must be a string URL')
+  .trim()
+  .isLength({ min: 1 })
+  .withMessage('Logo URL cannot be empty'),
+
 
     check('colorChoices')
         .optional()

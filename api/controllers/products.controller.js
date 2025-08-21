@@ -51,6 +51,11 @@ export const getProductsController = async (req, res) => {
       matchStage.isComplete = false;
     }
 
+
+    if(validatedData.isComplete){
+      matchStage.completionPercentage = 100;
+    }
+
     if (validatedData.categories && validatedData.categories.length > 0) {
       matchStage.categoryId = {
         $in: validatedData.categories.map(id => new mongoose.Types.ObjectId(id))

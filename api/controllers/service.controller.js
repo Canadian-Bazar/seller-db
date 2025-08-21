@@ -130,6 +130,11 @@ export const getServicesController = async (req, res) => {
       matchStage.isComplete = false;
     }
 
+
+    if (validatedData.isComplete) {
+      matchStage.completionPercentage = 100;
+    }
+
     pipeline.push({ $match: matchStage });
 
     // Lookup ServiceMedia to get images

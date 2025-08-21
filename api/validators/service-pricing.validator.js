@@ -8,7 +8,7 @@ export const validateSyncServicePricing = [
         .withMessage('Service ID should be a mongoose ID'),
 
     check('perModelPrice')
-        .optional()
+        .optional({ nullable: true })
         .isNumeric()
         .withMessage('Per model price must be a number')
         .custom(value => {
@@ -19,7 +19,7 @@ export const validateSyncServicePricing = [
         }),
 
     check('perHourPrice')
-        .optional()
+        .optional({ nullable: true })
         .isNumeric()
         .withMessage('Per hour price must be a number')
         .custom(value => {
@@ -30,7 +30,7 @@ export const validateSyncServicePricing = [
         }),
 
     check('perBatchPrice')
-        .optional()
+        .optional({ nullable: true })
         .isNumeric()
         .withMessage('Per batch price must be a number')
         .custom(value => {
@@ -40,25 +40,25 @@ export const validateSyncServicePricing = [
             return true;
         }),
 
-        check('volume')
-            .optional()
-            .isNumeric()
-            .withMessage('Volume price must be a number')
-            .custom(value => {
-                if (value < 0) {
-                    throw new Error('Volume price cannot be negative');
-                }
-                return true;
-            }),
-
+    check('volume')
+        .optional({ nullable: true })
+        .isNumeric()
+        .withMessage('Volume price must be a number')
+        .custom(value => {
+            if (value < 0) {
+                throw new Error('Volume price cannot be negative');
+            }
+            return true;
+        }),
 
     check('customQuoteEnabled')
-        .optional()
+        .optional({ nullable: true })
         .isBoolean()
         .withMessage('Custom quote enabled must be a boolean value'),
 
     (req, res, next) => validateRequest(req, res, next)
 ];
+
 
 export const validateGetServicePricing = [
     param('serviceId')
