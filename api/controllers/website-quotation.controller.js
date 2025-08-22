@@ -150,7 +150,7 @@ export const getAllWebsiteQuotationsController = async (req, res) => {
     const validatedData = matchedData(req);
     const { page = 1, limit = 10, status } = validatedData;
 
-    const filter = { seller: req.user._id };
+    const filter = {  };
     if (status) {
       filter.status = status;
     }

@@ -48,6 +48,9 @@ const ProductSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductDescription'
     },
+    minPrice:{
+      type:Number ,
+    } ,
     unitPrice:{
       type:Number ,
     } ,

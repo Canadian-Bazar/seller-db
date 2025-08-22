@@ -41,7 +41,8 @@ export const syncProductPricingController = async (req, res) => {
             }
         );
 
-
+        console.log("updatedPricing" , updatedPricing)
+        
       const product = await Products.findByIdAndUpdate(
             productId,
             {
@@ -54,11 +55,14 @@ export const syncProductPricingController = async (req, res) => {
                 runValidators: true 
             }
         );
-        console.log("product" , product)
+        console.log("product updated" , product)
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, 'Pricing synchronized successfully', {
-                pricing: updatedPricing
+                pricing: updatedPricing,
+                minPrice: product?.minPrice || 0,
+                maxPrice: product?.maxPrice || 0,
+                unitPrice: product?.unitPrice || 0
             })
         );
 
