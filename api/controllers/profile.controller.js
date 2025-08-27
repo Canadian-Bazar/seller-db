@@ -18,51 +18,48 @@ import otpGenerator from 'otp-generator'
 
 export const getProfile = async (req, res) => {
   try {
-    const sellerId = req.user._id
+    const sellerId = req.user._id;
     const seller = await Seller.findById(sellerId)
       .populate('categories')
-
-      .select('-password -__v')
+      .select('-password -__v');
 
     if (!seller) {
       return res.status(httpStatus.NOT_FOUND).json({
         message: 'Seller not found',
-      })
+      });
     }
 
-    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, seller))
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, seller));
   } catch (error) {
-    handleError(res, error)
+    handleError(res, error);
   }
-}
-
+};
 
 export const updateProfile = async (req, res) => {
   try {
     const sellerId = req.user._id;
-    const validatedData = matchedData(req);
-
-    if (req?.files && req.files.length > 0) {
-      const imageUrls = await uploadFile(req.files);
-      validatedData.logo = imageUrls[0];
-    }
+    let validatedData = matchedData(req);
 
     const allowedFields = [
       'companyName',
-      'businessType',
+      'parentCategory',
       'categories',
       'businessNumber',
       'street',
       'city',
       'state',
       'zip',
-      'logo'
+      'logo',
+      'yearEstablished',
+      'companyWebsite',
+      'numberOfEmployees',
+      'certifications',
+      'socialMediaLinks',
     ];
 
-    // Check if any valid fields are provided for update
     const updatedFields = Object.keys(req.body).filter(field => allowedFields.includes(field));
     const hasFileUpload = req?.files && req.files.length > 0;
-    
+
     if (updatedFields.length === 0 && !hasFileUpload) {
       throw buildErrorObject(
         httpStatus.BAD_REQUEST,
@@ -70,16 +67,29 @@ export const updateProfile = async (req, res) => {
       );
     }
 
+    if (!validatedData.hasOwnProperty('numberOfEmployees')) {
+      validatedData.numberOfEmployees = null;
+    }
+
+    if (!validatedData.hasOwnProperty('socialMediaLinks')) {
+      validatedData.socialMediaLinks = [];
+    } else if (validatedData.socialMediaLinks === null || validatedData.socialMediaLinks === undefined) {
+      validatedData.socialMediaLinks = [];
+    }
+
+    if (!validatedData.hasOwnProperty('certifications')) {
+      validatedData.certifications = [];
+    } else if (validatedData.certifications === null || validatedData.certifications === undefined) {
+      validatedData.certifications = [];
+    }
+
     let updatedSeller = await Seller.findByIdAndUpdate(
       sellerId,
       validatedData,
       { new: true }
     )
-      .populate('businessType', 'name')
       .populate('categories', 'name')
       .select('-password -__v');
-
-      
 
     if (!updatedSeller) {
       throw buildErrorObject(
@@ -91,23 +101,25 @@ export const updateProfile = async (req, res) => {
     console.log('Updated Seller:', updatedSeller);
 
     const requiredFields = [
+      'logo' ,
       'companyName',
-      'businessType',
       'categories',
       'businessNumber',
       'street',
       'city',
       'state',
-      'zip'
+      'zip',
+      'parentCategory',
+      'yearEstablished',
+      'companyWebsite'
     ];
 
     const isProfileComplete = requiredFields.every(field => {
       const value = updatedSeller[field];
-
+      
       console.log(`Checking field: ${field}, Value: ${value}`);
       
       if (Array.isArray(value)) {
-
         console.log(`Field ${field} is an array with length: ${value.length}`);
         return value.length > 0;
       }
@@ -115,9 +127,9 @@ export const updateProfile = async (req, res) => {
       return value && value.toString().trim() !== '';
     });
 
-    console.log(isProfileComplete)
+    console.log('Is Profile Complete:', isProfileComplete);
 
-    if (isProfileComplete ) {
+    if (isProfileComplete) {
       await Seller.findByIdAndUpdate(
         sellerId,
         { isProfileComplete: true },
@@ -132,7 +144,7 @@ export const updateProfile = async (req, res) => {
     return res.status(httpStatus.OK).json(
       buildResponse(httpStatus.OK, updatedSeller)
     );
-    
+
   } catch (error) {
     handleError(res, error);
   }

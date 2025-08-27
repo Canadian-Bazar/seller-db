@@ -45,5 +45,13 @@ router.delete(
 
 
 
+router.patch(
+    '/:serviceId',
+    serviceInfoValidators.validateArchiveService,
+    serviceInfoControllers.archiveServiceController
+)
+
+
+
 
 export default router

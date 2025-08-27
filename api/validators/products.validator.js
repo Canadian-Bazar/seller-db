@@ -87,3 +87,16 @@ export const validateDeleteProduct =[
   .withMessage('Product ID is required') ,
   (req , res , next)=>validateRequest(req , res , next)
 ]
+
+
+
+
+export const validateArchiveProduct =[
+  param('productId')
+  .exists({checkFalsy:true})
+  .isMongoId()  
+  .withMessage('Product ID is required')
+  .notEmpty()
+  .withMessage('Product ID is required') ,
+  (req , res , next)=>validateRequest(req , res , next)
+]

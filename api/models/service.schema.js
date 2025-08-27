@@ -3,6 +3,13 @@ import mongoose from 'mongoose'
 const ServiceSchema = new mongoose.Schema({
 
 
+   slug:{
+        type:String ,
+        trim:true ,
+        index:true ,
+    } ,
+
+
 
 
     seller: {
@@ -47,6 +54,28 @@ const ServiceSchema = new mongoose.Schema({
         media: { type: Boolean, default: false }           
     },
 
+    category:{
+        type:mongoose.Schema.Types.ObjectId ,
+        ref:'Category' ,
+        required:true
+    } ,
+
+
+
+    isBlocked:{
+        type: Boolean,
+        default: false,
+        index: true
+    } ,
+
+    isArchived:{
+        type: Boolean,
+        default: false,
+        index: true
+    } ,
+
+   
+
 }, { timestamps: true, collection: "Service" });
 
 ServiceSchema.index({ name: 'text' });
@@ -56,38 +85,40 @@ ServiceSchema.index({ serviceType: 1 });
 
 
 
-// Auto-generate slug from name - same pattern as products
 ServiceSchema.pre('save', async function(next) {
-  if (!this.isModified('name')) {
-    return next();
-  }
-  
-  const baseSlug = this.name
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '') 
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-') 
-    .trim(); 
-  
-  try {
-    let slug = baseSlug;
-    let count = 0;
-    let existingService;
+    if (!this.isModified('name')) {
+        return next();
+    }
     
-    do {
-      if (count > 0) {
-        slug = `${baseSlug}-${count}`;
-      }
-      
-      existingService = await mongoose.models.Service.findOne({ slug });
-      count++;
-    } while (existingService);
+    const baseSlug = this.name
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
     
-    this.slug = slug;
-    next();
-  } catch (error) {
-    next(error);
-  }
+    try {
+        let slug = baseSlug;
+        let count = 0;
+        let existingService;
+        
+        do {
+            if (count > 0) {
+                slug = `${baseSlug}-${count}`;
+            }
+            
+            existingService = await mongoose.models.Service.findOne({ 
+                slug,
+                _id: { $ne: this._id } // Exclude current document
+            });
+            count++;
+        } while (existingService);
+        
+        this.slug = slug;
+        next();
+    } catch (error) {
+        next(error);
+    }
 });
 
 export default mongoose.model('Service', ServiceSchema)

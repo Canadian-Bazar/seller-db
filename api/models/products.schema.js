@@ -114,7 +114,23 @@ const ProductSchema = new mongoose.Schema({
     brochure:{
       type:String ,
       default:null
+    } ,
+
+
+
+    isBlocked:{
+      type:Boolean ,
+      default:false ,
+      required:true
+    } ,
+
+    isArchived:{
+      type:Boolean ,
+      default:false ,
+      required:true
     }
+
+    
 
 
 

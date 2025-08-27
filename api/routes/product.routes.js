@@ -31,6 +31,12 @@ router.delete(
   productsControllers.deleteProductController
 )
 
+router.put(
+    '/:productId' ,
+    productValidators.validateArchiveProduct ,
+    productsControllers.archiveProductController
+)
+
 
 
 

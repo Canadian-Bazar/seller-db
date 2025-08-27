@@ -254,3 +254,34 @@ export const deleteProductController = async (req, res) => {
   }
 };
 
+
+
+export const archiveProductController = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req)
+    const { productId } = validatedData
+
+    const product = await Products.findOne({_id:productId , seller:req.user._id});
+
+    if(!product){
+      throw buildErrorObject(httpStatus.NOT_FOUND , 'Product not found')
+    }
+
+    if(parseInt(product.completionPercentage) !== 100){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Product is not complete and cannot be archived')
+    }
+
+
+    if(product.isArchived){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Product is already archived')
+    }
+
+    product.isArchived = true
+    await product.save()
+
+    res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , 'Product archived successfully'))
+  }catch(err){
+    handleError(res , err)
+  }
+}
+

@@ -1,6 +1,7 @@
 import { check, param } from "express-validator";
 import validateRequest from "../utils/validateRequest.js";
 import { paginationValidator } from "./pagination.validator.js";
+import { validate } from 'node-cron';
 
 export const validateCreateService = [
     check('name')
@@ -20,6 +21,13 @@ export const validateCreateService = [
         .trim()
         .isLength({ min: 10, max: 1000 })
         .withMessage('Description must be between 10 and 1000 characters'),
+
+
+    check('category')
+         .exists({ checkFalsy: true })
+        .withMessage('Category is required')
+        .isMongoId()
+        .withMessage('Category must be a valid Mongo ID'),
 
     (req, res, next) => validateRequest(req, res, next)
 ];
@@ -116,6 +124,18 @@ export const validateDeleteService = [
         .withMessage('Service ID is required')
         .isMongoId()
         .withMessage('Service ID must be a valid MongoDB ObjectId'),    
+
+    (req, res, next) => validateRequest(req, res, next)
+];
+
+
+
+
+export const validateArchiveService = [
+    param('serviceId')  
+        .exists({ checkFalsy: true })
+        .isMongoId()
+        .withMessage('Service ID should be a mongoose ID'),
 
     (req, res, next) => validateRequest(req, res, next)
 ];

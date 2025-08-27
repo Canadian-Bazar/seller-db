@@ -6,21 +6,22 @@ import httpStatus from 'http-status';
 export const updateProfileValidator = [
   check('companyName')
     .optional()
-    .not()
-    .isEmpty()
-    .withMessage('Full Name cannot be empty')
+    .notEmpty()
+    .withMessage('Company name cannot be empty')
     .isLength({ min: 2, max: 50 })
-    .withMessage('Full Name must be between 2 and 50 characters')
+    .withMessage('Company name must be between 2 and 50 characters')
     .isAlpha('en-US', { ignore: ' ' })
-    .withMessage('Full Name can only contain letters and spaces'),
+    .withMessage('Company name can only contain letters and spaces'),
 
-  check('businessType')
+  check('logo')
     .optional()
-    .not()
-    .isEmpty()
-    .withMessage('Business Type cannot be empty')
+    .isString()
+    .withMessage('Logo must be a string'),
+
+  check('parentCategory')
+    .optional()
     .isMongoId()
-    .withMessage('Invalid Business Type ID format'),
+    .withMessage('Parent Category must be a valid Mongo ID'),
 
   check('categories')
     .optional()
@@ -28,13 +29,13 @@ export const updateProfileValidator = [
     .withMessage('Categories must be an array with at least one category'),
 
   check('categories.*')
+    .optional()
     .isMongoId()
     .withMessage('Invalid category ID format'),
 
   check('businessNumber')
     .optional()
-    .not()
-    .isEmpty()
+    .notEmpty()
     .withMessage('Business Number cannot be empty')
     .isLength({ min: 5, max: 20 })
     .withMessage('Business Number must be between 5 and 20 characters')
@@ -43,16 +44,14 @@ export const updateProfileValidator = [
 
   check('street')
     .optional()
-    .not()
-    .isEmpty()
+    .notEmpty()
     .withMessage('Street cannot be empty')
     .isLength({ min: 5, max: 100 })
     .withMessage('Street must be between 5 and 100 characters'),
 
   check('city')
     .optional()
-    .not()
-    .isEmpty()
+    .notEmpty()
     .withMessage('City cannot be empty')
     .isLength({ min: 2, max: 50 })
     .withMessage('City must be between 2 and 50 characters')
@@ -61,8 +60,7 @@ export const updateProfileValidator = [
 
   check('state')
     .optional()
-    .not()
-    .isEmpty()
+    .notEmpty()
     .withMessage('State cannot be empty')
     .isLength({ min: 2, max: 50 })
     .withMessage('State must be between 2 and 50 characters')
@@ -70,49 +68,99 @@ export const updateProfileValidator = [
     .withMessage('State can only contain letters and spaces'),
 
   check('zip')
- .optional()
-  .notEmpty()
-  .withMessage('Postal code cannot be empty')
-  .matches(/^[A-Za-z]\d[A-Za-z][ ]?\d[A-Za-z]\d$/)
-  .withMessage('Invalid Canadian postal code format'),
+    .optional()
+    .notEmpty()
+    .withMessage('Postal code cannot be empty')
+    .isPostalCode('CA')
+    .withMessage('Invalid ZIP code format')
+    .matches(/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/)
+    .withMessage('Postal code must follow the Canadian format (e.g., A1A 1A1)'),
 
-    // .isPostalCode({locale:'CA'})
-    // .withMessage('Invalid ZIP code format'),
+  check('yearEstablished')
+    .optional()
+    .isInt({ min: 1500, max: new Date().getFullYear() })
+    .withMessage(`Year Established must be between 1500 and ${new Date().getFullYear()}`),
 
+  check('companyWebsite')
+    .optional()
+    .isURL()
+    .withMessage('Invalid Company Website URL'),
 
+  check('numberOfEmployees')
+    .optional({nullable:true})
+    .isInt({ min: 1 })
+    .withMessage('Number of Employees must be a positive integer'),
 
-    body()
-    .custom((value, { req }) => {
-      const allowedFields = [
-        'businessType',
-        'categories',
-        'businessNumber',
-        'street',
-        'city',
-        'state',
-        'zip'
-      ];
-      
-      const providedFields = Object.keys(req.body).filter(field => 
-        allowedFields.includes(field)
+  check('certifications')
+    .optional()
+    .isArray()
+    .withMessage('Certifications must be a array'),
+
+  check('certifications.*.name')
+    .optional()
+    .notEmpty()
+    .withMessage('Certification name is required')
+    .isString(),
+
+  check('certifications.*.url')
+    .optional()
+    .notEmpty()
+    .withMessage('Certification URL is required')
+    .isString()
+    .withMessage('Invalid certification URL'),
+
+  check('socialMediaLinks')
+    .optional()
+    .isArray()
+    .withMessage('Social links must be an array'),
+
+  check('socialMediaLinks.*.platform')
+    .optional()
+    .notEmpty()
+    .withMessage('Social media platform is required')
+    .isString(),
+
+  check('socialMediaLinks.*.url')
+    .optional()
+    .notEmpty()
+    .withMessage('Social media URL is required')
+    .isURL()
+    .withMessage('Invalid social media URL'),
+
+  body().custom((value, { req }) => {
+    const allowedFields = [
+      'companyName',
+      'logo',
+      'parentCategory',
+      'categories',
+      'businessNumber',
+      'street',
+      'city',
+      'state',
+      'zip',
+      'yearEstablished',
+      'companyWebsite',
+      'numberOfEmployees',
+      'certifications',
+      'socialMediaLinks'
+    ];
+
+    const providedFields = Object.keys(req.body).filter(field =>
+      allowedFields.includes(field)
+    );
+
+    if (providedFields.length === 0) {
+      throw buildErrorObject(
+        httpStatus.BAD_REQUEST,
+        'At least one valid field must be provided for update'
       );
-      
-      if (providedFields.length === 0) {
-        throw buildErrorObject(
-          httpStatus.BAD_REQUEST, 
-          'At least one valid field must be provided for update'
-        );
-      }
-      
-      return true;
-    }),
+    }
 
+    return true;
+  }),
 
-
-    (req , res, next)=>validateRequest(req, res, next)
-
-]
-
+  (req, res, next) => validateRequest(req, res, next)
+];
 
 
 export const getProfileValidator =[

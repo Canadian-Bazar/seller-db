@@ -12,7 +12,7 @@ export const createServiceController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
 
-        const { name, description } = validatedData;
+        const { name, description , category } = validatedData;
 
         const newService = new Services({
             name: name,
@@ -29,7 +29,9 @@ export const createServiceController = async (req, res) => {
                 pricing: false,
                 customization: false,
                 media: false
-            }
+            } ,
+
+            category:category
         });
 
         const savedService = await newService.save();
@@ -49,7 +51,7 @@ export const updateServiceInfoController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
         const { serviceId } = req.params;
-        const { name, description } = validatedData;
+        const { name, description , category} = validatedData;
 
         const updateData = {};
         
@@ -59,6 +61,10 @@ export const updateServiceInfoController = async (req, res) => {
         
         if (description !== undefined) {
             updateData.description = description;
+        }
+
+        if(category !== undefined) {
+            updateData.category = category ;
         }
 
         const updatedService = await Services.findByIdAndUpdate(
@@ -87,7 +93,9 @@ export const getServiceInfoController = async (req, res) => {
         const { serviceId } = req.params;
 
         const service = await Services.findById(serviceId)
-            .select('name description completionPercentage incompleteSteps stepStatus');
+            .select('name description completionPercentage incompleteSteps stepStatus')
+            .populate('category' , 'name slug _id');
+
 
         if (!service) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Service not found');
@@ -259,6 +267,44 @@ export const deleteServiceController = async (req, res) => {
     } catch (err) {
         handleError(res, err);
     }
+}
+
+
+export const archiveServiceController = async(req , res)=>{
+  try{
+    const validatedData = matchedData(req);
+    const userId = req.user._id;
+    const { serviceId } = validatedData;
+
+    const service = await Services.find({ _id: serviceId, seller: userId });  
+
+    if (!service || service.length === 0) {
+      return res.status(httpStatus.NOT_FOUND).json(
+          buildErrorObject(httpStatus.NOT_FOUND, 'Service not found')
+      );
+    } 
+
+    if(parseInt(service[0].completionPercentage) !== 100) {
+      return res.status(httpStatus.BAD_REQUEST).json(
+          buildErrorObject(httpStatus.BAD_REQUEST, 'Only completed services can be archived')
+      );
+    } 
+    if(service[0].isArchived) {
+      return res.status(httpStatus.BAD_REQUEST).json(
+          buildErrorObject(httpStatus.BAD_REQUEST, 'Service is already archived')
+      );
+    }
+
+    service[0].isArchived = true;
+    await service[0].save();  
+
+    res.status(httpStatus.OK).json(
+        buildResponse(httpStatus.OK, 'Service archived successfully')
+    );  
+
+  } catch(err) {
+    handleError(res, err);
+  }
 }
 
 

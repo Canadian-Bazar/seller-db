@@ -23,17 +23,19 @@ const SellerSchema = new mongoose.Schema({
           lowercase: true,
      },
 
-     businessType: {
+  
+
+
+     parentCategory:{
           type: mongoose.Schema.Types.ObjectId,
-          ref: 'BusinessType',
+          ref: 'Category',
           required: false,
-     },
+     } ,
 
      categories: [
           {
                 type: mongoose.Types.ObjectId ,
                 ref:'Category' ,
-                required:true
           }
      ],
      businessNumber: {
@@ -89,7 +91,29 @@ const SellerSchema = new mongoose.Schema({
 
      stripeCustomerId:{
           type:String
-     }
+     } ,
+
+     companyWebsite:{
+          type:String ,
+     } ,
+
+     yearEstablished:{
+          type:Number ,
+     } ,
+
+     numberOfEmployees:{
+          type:Number ,
+     } ,
+
+     certifications:[{
+          name: String ,
+          url: String
+     }]  ,
+
+     socialMediaLinks:[{
+          platform: String ,
+          url: String
+     }] ,
     
 
 }, {
