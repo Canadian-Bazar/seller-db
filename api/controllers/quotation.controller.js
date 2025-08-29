@@ -545,7 +545,7 @@ export const negotiateQuotationController = async (req, res) => {
         const negotiationMessageArray = await Message.create([{
             senderId: sellerId,
             senderModel: 'Seller',
-            content: "I'd like to discuss some adjustments to the quotation. Let's negotiate the terms.",
+            content: "",
             chat: chat._id,
             quotationId: quotation._id,
             messageType: 'text',
