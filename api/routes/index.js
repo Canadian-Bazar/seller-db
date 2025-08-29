@@ -2,6 +2,7 @@ import express from 'express'
 import authRoutes from '../routes/auth.routes.js'
 import uploadRoutes from '../routes/upload.routes.js'
 import quotationRoutes from './quotation.routes.js'
+import serviceQuotationRoutes from './service-quotation.routes.js'
 import productAttributesRoutes from './product-attributes.routes.js'
 import productPricingRoutes from './product-pricing.routes.js'
 import productDescriptionRoutes from './product-description.routes.js'
@@ -33,6 +34,7 @@ import websiteDocumentationRoutes from './website-documentation.routes.js'
 import websiteProjectRoutes from './website-project.routes.js'
 import reviewRoutes from './review.routes.js'
 import claimStoreRoutes from './claim-stores.routes.js'
+import certificationRoutes from './certifications.routes.js'
 
 
 
@@ -43,6 +45,7 @@ const router = express.Router()
 v1Routes.use('/auth', authRoutes)
 v1Routes.use('/upload', uploadRoutes)
 v1Routes.use('/quotation', quotationRoutes)
+v1Routes.use('/service-quotation', serviceQuotationRoutes)
 v1Routes.use('/product-attributes' , productAttributesRoutes)
 v1Routes.use('/product-pricing' , productPricingRoutes)
 v1Routes.use('/product-description' , productDescriptionRoutes)
@@ -74,6 +77,7 @@ v1Routes.use('/website-documentation' , websiteDocumentationRoutes)
 v1Routes.use('/website-project' , websiteProjectRoutes)
 v1Routes.use('/reviews' , reviewRoutes)
 v1Routes.use('/claim-stores', claimStoreRoutes)
+v1Routes.use('/certifications', certificationRoutes)
 
 
 

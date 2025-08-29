@@ -77,11 +77,9 @@ export const validateSyncServiceMedia = [
 
     check('industryCertifications.*')
         .if(check('industryCertifications').isArray({ min: 1 }))
-        .isString()
-        .withMessage('Each certification must be a string')
-        .trim()
-        .isLength({ min: 1, max: 200 })
-        .withMessage('Each certification must be between 1 and 200 characters'),
+        .isMongoId()
+        .withMessage('Each certification must be a valid Mongo ID') ,
+     
 
 
     check('brochure')
