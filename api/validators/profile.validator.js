@@ -81,10 +81,16 @@ export const updateProfileValidator = [
     .isInt({ min: 1500, max: new Date().getFullYear() })
     .withMessage(`Year Established must be between 1500 and ${new Date().getFullYear()}`),
 
-  check('companyWebsite')
-    .optional()
-    .isURL()
-    .withMessage('Invalid Company Website URL'),
+check('companyWebsite')
+  .optional({ nullable: true })
+  .custom((value) => {
+    if (value === '') return true; 
+    if (!/^https?:\/\/[^\s$.?#].[^\s]*$/i.test(value)) {
+      throw new Error('Invalid Company Website URL');
+    }
+    return true;
+  }) ,
+
 
   check('numberOfEmployees')
     .optional({nullable:true})

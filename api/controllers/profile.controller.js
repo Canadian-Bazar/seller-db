@@ -111,7 +111,6 @@ export const updateProfile = async (req, res) => {
       'zip',
       'parentCategory',
       'yearEstablished',
-      'companyWebsite'
     ];
 
     const isProfileComplete = requiredFields.every(field => {
