@@ -86,7 +86,7 @@ export const updateProfile = async (req, res) => {
     let updatedSeller = await Seller.findByIdAndUpdate(
       sellerId,
       validatedData,
-      { new: true }
+      { new: true , upsert:true } ,
     )
       .populate('categories', 'name')
       .select('-password -__v');
