@@ -1,5 +1,188 @@
-import { check, param } from "express-validator";
+import { check, param, query } from "express-validator";
 import validateRequest from "../utils/validateRequest.js";
+import { paginationValidator } from './pagination.validator.js';
+
+export const getServiceOrderByIdValidator = [
+    param('orderId')
+        .exists()
+        .withMessage('Order ID is required')
+        .not()
+        .isEmpty()
+        .withMessage('Order ID cannot be empty')
+        .isString()
+        .withMessage('Order ID must be a string'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const updateServiceOrderStatusValidator = [
+    param('orderId')
+        .exists()
+        .withMessage('Order ID is required')
+        .not()
+        .isEmpty()
+        .withMessage('Order ID cannot be empty')
+        .isString()
+        .withMessage('Order ID must be a string'),
+
+    check('status')
+        .exists()
+        .withMessage('Status is required')
+        .not()
+        .isEmpty()
+        .withMessage('Status cannot be empty')
+        .isIn([
+            'pending',
+            'confirmed', 
+            'in_progress',
+            'review_ready',
+            'revision_requested',
+            'completed',
+            'delivered',
+            'cancelled'
+        ])
+        .withMessage('Invalid service order status'),
+
+    check('expectedDeliveryDate')
+        .optional()
+        .isISO8601()
+        .withMessage('Expected delivery date must be a valid date')
+        .custom((value) => {
+            if (new Date(value) <= new Date()) {
+                throw new Error('Expected delivery date must be in the future');
+            }
+            return true;
+        }),
+
+    check('milestones')
+        .optional()
+        .isArray()
+        .withMessage('Milestones must be an array'),
+
+    check('milestones.*.name')
+        .if(check('milestones').isArray({ min: 1 }))
+        .exists()
+        .withMessage('Milestone name is required')
+        .isString()
+        .withMessage('Milestone name must be a string')
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Milestone name must be between 1 and 100 characters'),
+
+    check('milestones.*.description')
+        .if(check('milestones').isArray({ min: 1 }))
+        .optional()
+        .isString()
+        .withMessage('Milestone description must be a string')
+        .isLength({ max: 500 })
+        .withMessage('Milestone description cannot exceed 500 characters'),
+
+    check('milestones.*.status')
+        .if(check('milestones').isArray({ min: 1 }))
+        .exists()
+        .withMessage('Milestone status is required')
+        .isIn(['pending', 'in_progress', 'completed'])
+        .withMessage('Invalid milestone status'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const getServiceOrdersValidator = [
+    ...paginationValidator,
+
+    query('status')
+        .optional()
+        .isIn([
+            'pending',
+            'confirmed', 
+            'in_progress',
+            'review_ready',
+            'revision_requested',
+            'completed',
+            'delivered',
+            'cancelled'
+        ])
+        .withMessage('Invalid service order status'),
+
+    query('search')
+        .optional()
+        .isString()
+        .withMessage('Search must be a string')
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Search must be between 1 and 100 characters'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const addServiceOrderDeliverableValidator = [
+    param('orderId')
+        .exists()
+        .withMessage('Order ID is required')
+        .not()
+        .isEmpty()
+        .withMessage('Order ID cannot be empty')
+        .isString()
+        .withMessage('Order ID must be a string'),
+
+    check('name')
+        .exists()
+        .withMessage('Deliverable name is required')
+        .not()
+        .isEmpty()
+        .withMessage('Deliverable name cannot be empty')
+        .isString()
+        .withMessage('Deliverable name must be a string')
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Deliverable name must be between 1 and 100 characters'),
+
+    check('description')
+        .optional()
+        .isString()
+        .withMessage('Deliverable description must be a string')
+        .isLength({ max: 500 })
+        .withMessage('Deliverable description cannot exceed 500 characters'),
+
+    check('fileUrl')
+        .exists()
+        .withMessage('File URL is required')
+        .not()
+        .isEmpty()
+        .withMessage('File URL cannot be empty')
+        .isURL()
+        .withMessage('File URL must be a valid URL'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const updateServiceOrderMilestoneValidator = [
+    param('orderId')
+        .exists()
+        .withMessage('Order ID is required')
+        .not()
+        .isEmpty()
+        .withMessage('Order ID cannot be empty')
+        .isString()
+        .withMessage('Order ID must be a string'),
+
+    check('milestoneId')
+        .exists()
+        .withMessage('Milestone ID is required')
+        .not()
+        .isEmpty()
+        .withMessage('Milestone ID cannot be empty')
+        .isMongoId()
+        .withMessage('Milestone ID must be a valid MongoDB ID'),
+
+    check('status')
+        .exists()
+        .withMessage('Status is required')
+        .not()
+        .isEmpty()
+        .withMessage('Status cannot be empty')
+        .isIn(['pending', 'in_progress', 'completed'])
+        .withMessage('Invalid milestone status'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
 
 export const validateSyncServiceOrder = [
     param('serviceId')

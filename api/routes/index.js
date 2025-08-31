@@ -35,6 +35,7 @@ import websiteProjectRoutes from './website-project.routes.js'
 import reviewRoutes from './review.routes.js'
 import claimStoreRoutes from './claim-stores.routes.js'
 import certificationRoutes from './certifications.routes.js'
+import serviceInvoiceRoutes from './service-invoice.routes.js'
 
 
 
@@ -78,6 +79,7 @@ v1Routes.use('/website-project' , websiteProjectRoutes)
 v1Routes.use('/reviews' , reviewRoutes)
 v1Routes.use('/claim-stores', claimStoreRoutes)
 v1Routes.use('/certifications', certificationRoutes)
+v1Routes.use('/service-invoice', serviceInvoiceRoutes)
 
 
 
