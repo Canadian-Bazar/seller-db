@@ -168,7 +168,7 @@ export const generateServiceInvoice = async (req, res) => {
 
         // Step 9: Handle external operations (Redis and notifications) after transaction
         try {
-            await storeMessageInRedis(chat._id, message);
+            await storeMessageInRedis(chat._id, message , 'service');
         } catch (redisError) {
             console.error('Redis error (non-blocking):', redisError);
         }

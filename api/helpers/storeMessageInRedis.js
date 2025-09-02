@@ -12,16 +12,23 @@ async function updateUserChatOrder(userId, chatId, messageTimestamp) {
    }
 }
 
-async function storeMessageInRedis(chatId, message) {
+async function storeMessageInRedis(chatId, message , type='product') {
    try {
+
+    if(type==='product')
        await redisClient.rpush(`MESSAGEQUEUE:${chatId}`, JSON.stringify(message));
+    else
+       await redisClient.rpush(`SERVICE_MESSAGEQUEUE:${chatId}` , JSON.stringify(message))
+
+
+       console.log('message savedddddd---')
        
        // NEW: Update chat order for both users
-       const chat = await Chat.findById(chatId).select('buyer seller').lean();
-       if (chat) {
-           await updateUserChatOrder(chat.buyer, chatId, message.createdAt);
-           await updateUserChatOrder(chat.seller, chatId, message.createdAt);
-       }
+    //    const chat = await Chat.findById(chatId).select('buyer seller').lean();
+    //    if (chat) {
+    //        await updateUserChatOrder(chat.buyer, chatId, message.createdAt);
+    //        await updateUserChatOrder(chat.seller, chatId, message.createdAt);
+    //    }
    } catch (error) {
        console.error('Error storing message in Redis:', error);
    }
