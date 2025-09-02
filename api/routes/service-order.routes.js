@@ -30,18 +30,6 @@ router.put(
     serviceOrderControllers.updateServiceOrderStatus
 )
 
-// Add deliverable to service order
-router.post(
-    '/:orderId/deliverables',
-    serviceOrderValidators.addServiceOrderDeliverableValidator,
-    serviceOrderControllers.addServiceOrderDeliverable
-)
 
-// Update milestone status
-router.put(
-    '/:orderId/milestones',
-    serviceOrderValidators.updateServiceOrderMilestoneValidator,
-    serviceOrderControllers.updateServiceOrderMilestone
-)
 
 export default router

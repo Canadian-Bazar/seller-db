@@ -55,6 +55,7 @@ export const updateProfile = async (req, res) => {
       'numberOfEmployees',
       'certifications',
       'socialMediaLinks',
+      'languagesSupported',
     ];
 
     const updatedFields = Object.keys(req.body).filter(field => allowedFields.includes(field));
@@ -81,6 +82,12 @@ export const updateProfile = async (req, res) => {
       validatedData.certifications = [];
     } else if (validatedData.certifications === null || validatedData.certifications === undefined) {
       validatedData.certifications = [];
+    }
+
+    if (!validatedData.hasOwnProperty('languagesSupported')) {
+      validatedData.languagesSupported = [];
+    } else if (validatedData.languagesSupported === null || validatedData.languagesSupported === undefined) {
+      validatedData.languagesSupported = [];
     }
 
     let updatedSeller = await Seller.findByIdAndUpdate(
@@ -111,6 +118,7 @@ export const updateProfile = async (req, res) => {
       'zip',
       'parentCategory',
       'yearEstablished',
+      'languagesSupported',
     ];
 
     const isProfileComplete = requiredFields.every(field => {

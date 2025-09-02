@@ -114,6 +114,14 @@ const SellerSchema = new mongoose.Schema({
           platform: String ,
           url: String
      }] ,
+
+
+     languagesSupported:[
+          {
+               code:String ,
+               name:String 
+          }
+     ]
     
 
 }, {

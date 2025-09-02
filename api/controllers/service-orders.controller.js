@@ -1,4 +1,4 @@
-import ServiceOrders from '../models/service-order.schema.js';
+import ServiceOrders from '../models/service-orders.schema.js';
 import handleError from '../utils/handleError.js';
 import buildErrorObject from '../utils/buildErrorObject.js';
 import buildResponse from '../utils/buildResponse.js';
@@ -31,7 +31,7 @@ export const getServiceOrders = async (req, res) => {
             },
             {
                 $match: {
-                    'serviceQuotation.sellerId': new mongoose.Types.ObjectId(sellerId)
+                    'serviceQuotation.seller': new mongoose.Types.ObjectId(sellerId)
                 }
             }
         ];
@@ -44,7 +44,7 @@ export const getServiceOrders = async (req, res) => {
             {
                 $lookup: {
                     from: 'Buyer',
-                    localField: 'serviceQuotation.buyerId',
+                    localField: 'serviceQuotation.buyer',
                     foreignField: '_id',
                     as: 'buyer'
                 }
@@ -73,12 +73,7 @@ export const getServiceOrders = async (req, res) => {
                     orderId: 1,
                     status: 1,
                     finalPrice: 1,
-                    serviceType: 1,
-                    deliveryMethod: 1,
-                    expectedDeliveryDate: 1,
-                    actualDeliveryDate: 1,
-                    deliveredAt: 1,
-                    createdAt: 1,
+                  
                     'buyer.fullName': 1,
                     'buyer.avatar': 1,
                     'buyer.profilePic': 1,
@@ -95,6 +90,11 @@ export const getServiceOrders = async (req, res) => {
 
         const orders = await ServiceOrders.aggregate(pipeline);
 
+
+        console.log(orders);
+        console.log("sellerId:", sellerId);
+        console.log("pipeline:", JSON.stringify(pipeline, null, 2));
+
         // Count pipeline for pagination
         const countPipeline = [
             {
@@ -110,7 +110,7 @@ export const getServiceOrders = async (req, res) => {
             },
             {
                 $match: {
-                    'serviceQuotation.sellerId': new mongoose.Types.ObjectId(sellerId)
+                    'serviceQuotation.seller': new mongoose.Types.ObjectId(sellerId)
                 }
             }
         ];
@@ -125,7 +125,7 @@ export const getServiceOrders = async (req, res) => {
                 {
                     $lookup: {
                         from: 'Buyer',
-                        localField: 'serviceQuotation.buyerId',
+                        localField: 'serviceQuotation.buyer',
                         foreignField: '_id',
                         as: 'buyer'
                     }
@@ -172,7 +172,7 @@ export const getServiceOrders = async (req, res) => {
 export const updateServiceOrderStatus = async (req, res) => {
     try {
         const validatedData = matchedData(req);
-        const { orderId, status, expectedDeliveryDate, milestones } = validatedData;
+        const { orderId, status } = validatedData;
         const sellerId = req.user._id;
 
         const order = await ServiceOrders.findOne({ orderId })
@@ -182,24 +182,19 @@ export const updateServiceOrderStatus = async (req, res) => {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Service order not found');
         }
 
-        if (order.serviceQuotationId.sellerId.toString() !== sellerId.toString()) {
+        if (order.serviceQuotationId.seller.toString() !== sellerId.toString()) {
             throw buildErrorObject(httpStatus.FORBIDDEN, 'You do not have access to this service order');
         }
 
         // Update order
         const updateData = { status };
-        if (expectedDeliveryDate) updateData.expectedDeliveryDate = expectedDeliveryDate;
-        if (status === 'delivered') updateData.deliveredAt = new Date();
-        if (status === 'completed') updateData.actualDeliveryDate = new Date();
-        if (milestones) updateData.milestones = milestones;
-
+       
         const updatedOrder = await ServiceOrders.findOneAndUpdate(
             { orderId },
             updateData,
             { new: true }
         );
 
-        // Update service chat status if completed
         if (status === 'completed' || status === 'delivered') {
             await ServiceChat.findByIdAndUpdate(order.serviceChatId, {
                 phase: 'completed',
@@ -207,11 +202,10 @@ export const updateServiceOrderStatus = async (req, res) => {
             });
         }
 
-        // Create service message
         await ServiceMessages.create({
             senderId: sellerId,
             senderModel: 'Seller',
-            content: `Service order status updated to: ${status}${expectedDeliveryDate ? `. Expected delivery: ${expectedDeliveryDate}` : ''}`,
+            content: `Service order status updated to: ${status}`,
             chat: order.serviceChatId,
             quotationId: order.serviceQuotationId._id,
             messageType: 'text',
@@ -253,13 +247,13 @@ export const getServiceOrderById = async (req, res) => {
             },
             {
                 $match: {
-                    'serviceQuotation.sellerId': new mongoose.Types.ObjectId(sellerId)
+                    'serviceQuotation.seller': new mongoose.Types.ObjectId(sellerId)
                 }
             },
             {
                 $lookup: {
                     from: 'Buyer',
-                    localField: 'serviceQuotation.buyerId',
+                    localField: 'serviceQuotation.buyer',
                     foreignField: '_id',
                     as: 'buyer'
                 }
@@ -294,14 +288,7 @@ export const getServiceOrderById = async (req, res) => {
                     orderId: 1,
                     status: 1,
                     finalPrice: 1,
-                    serviceType: 1,
-                    deliveryMethod: 1,
-                    expectedDeliveryDate: 1,
-                    actualDeliveryDate: 1,
-                    deliveredAt: 1,
-                    milestones: 1,
-                    deliverables: 1,
-                    feedback: 1,
+                  
                     createdAt: 1,
                     updatedAt: 1,
                     billingAddress: 1,
@@ -363,98 +350,5 @@ export const getServiceOrderById = async (req, res) => {
     }
 };
 
-export const addServiceOrderDeliverable = async (req, res) => {
-    try {
-        const validatedData = matchedData(req);
-        const { orderId, name, description, fileUrl } = validatedData;
-        const sellerId = req.user._id;
 
-        const order = await ServiceOrders.findOne({ orderId })
-            .populate('serviceQuotationId');
 
-        if (!order) {
-            throw buildErrorObject(httpStatus.NOT_FOUND, 'Service order not found');
-        }
-
-        if (order.serviceQuotationId.sellerId.toString() !== sellerId.toString()) {
-            throw buildErrorObject(httpStatus.FORBIDDEN, 'You do not have access to this service order');
-        }
-
-        const deliverable = {
-            name,
-            description,
-            fileUrl,
-            deliveredAt: new Date()
-        };
-
-        const updatedOrder = await ServiceOrders.findOneAndUpdate(
-            { orderId },
-            { $push: { deliverables: deliverable } },
-            { new: true }
-        );
-
-        // Create service message about deliverable
-        await ServiceMessages.create({
-            senderId: sellerId,
-            senderModel: 'Seller',
-            content: `New deliverable added: ${name}`,
-            chat: order.serviceChatId,
-            quotationId: order.serviceQuotationId._id,
-            messageType: 'text',
-            isRead: false
-        });
-
-        res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, {
-                message: 'Deliverable added successfully',
-                order: updatedOrder
-            })
-        );
-
-    } catch (err) {
-        handleError(res, err);
-    }
-};
-
-export const updateServiceOrderMilestone = async (req, res) => {
-    try {
-        const validatedData = matchedData(req);
-        const { orderId, milestoneId, status } = validatedData;
-        const sellerId = req.user._id;
-
-        const order = await ServiceOrders.findOne({ orderId })
-            .populate('serviceQuotationId');
-
-        if (!order) {
-            throw buildErrorObject(httpStatus.NOT_FOUND, 'Service order not found');
-        }
-
-        if (order.serviceQuotationId.sellerId.toString() !== sellerId.toString()) {
-            throw buildErrorObject(httpStatus.FORBIDDEN, 'You do not have access to this service order');
-        }
-
-        const updateData = {
-            'milestones.$.status': status
-        };
-
-        if (status === 'completed') {
-            updateData['milestones.$.completedAt'] = new Date();
-        }
-
-        const updatedOrder = await ServiceOrders.findOneAndUpdate(
-            { orderId, 'milestones._id': milestoneId },
-            updateData,
-            { new: true }
-        );
-
-        res.status(httpStatus.OK).json(
-            buildResponse(httpStatus.OK, {
-                message: 'Milestone updated successfully',
-                order: updatedOrder
-            })
-        );
-
-    } catch (err) {
-        handleError(res, err);
-    }
-};

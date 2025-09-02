@@ -133,6 +133,24 @@ check('companyWebsite')
     .isURL()
     .withMessage('Invalid social media URL'),
 
+  check('languagesSupported')
+    .notEmpty()
+    .withMessage('Languages supported is required')
+    .isArray({ min: 1 })
+    .withMessage('Languages supported must be an array with at least one language'),
+
+  check('languagesSupported.*.name')
+    .notEmpty()
+    .withMessage('Language name is required')
+    .isString()
+    .withMessage('Language name must be a string'),
+
+  check('languagesSupported.*.code')
+    .notEmpty()
+    .withMessage('Language code is required')
+    .isString()
+    .withMessage('Language code must be a string'),
+
   body().custom((value, { req }) => {
     const allowedFields = [
       'companyName',
@@ -148,7 +166,8 @@ check('companyWebsite')
       'companyWebsite',
       'numberOfEmployees',
       'certifications',
-      'socialMediaLinks'
+      'socialMediaLinks',
+      'languagesSupported'
     ];
 
     const providedFields = Object.keys(req.body).filter(field =>

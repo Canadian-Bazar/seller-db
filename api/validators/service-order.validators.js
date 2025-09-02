@@ -43,46 +43,6 @@ export const updateServiceOrderStatusValidator = [
         ])
         .withMessage('Invalid service order status'),
 
-    check('expectedDeliveryDate')
-        .optional()
-        .isISO8601()
-        .withMessage('Expected delivery date must be a valid date')
-        .custom((value) => {
-            if (new Date(value) <= new Date()) {
-                throw new Error('Expected delivery date must be in the future');
-            }
-            return true;
-        }),
-
-    check('milestones')
-        .optional()
-        .isArray()
-        .withMessage('Milestones must be an array'),
-
-    check('milestones.*.name')
-        .if(check('milestones').isArray({ min: 1 }))
-        .exists()
-        .withMessage('Milestone name is required')
-        .isString()
-        .withMessage('Milestone name must be a string')
-        .isLength({ min: 1, max: 100 })
-        .withMessage('Milestone name must be between 1 and 100 characters'),
-
-    check('milestones.*.description')
-        .if(check('milestones').isArray({ min: 1 }))
-        .optional()
-        .isString()
-        .withMessage('Milestone description must be a string')
-        .isLength({ max: 500 })
-        .withMessage('Milestone description cannot exceed 500 characters'),
-
-    check('milestones.*.status')
-        .if(check('milestones').isArray({ min: 1 }))
-        .exists()
-        .withMessage('Milestone status is required')
-        .isIn(['pending', 'in_progress', 'completed'])
-        .withMessage('Invalid milestone status'),
-
     (req, res, next) => validateRequest(req, res, next)
 ]
 

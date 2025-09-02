@@ -340,7 +340,7 @@ export const getDashboardStats = async (req, res) => {
         for (let chat of chatsWithUnseenMessages) {
             try {
                 // Check Redis for latest messages
-                const redisMessages = await redisClient.lRange(`MESSAGEQUEUE:${chat._id}`, -1, -1);
+                const redisMessages = await redisClient.lrange(`MESSAGEQUEUE:${chat._id}`, -1, -1);
                 let finalLastMessage = chat.lastMessage;
                 let lastMessageTimestamp = chat.lastMessage?.createdAt ? new Date(chat.lastMessage.createdAt) : new Date(0);
 
