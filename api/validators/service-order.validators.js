@@ -32,16 +32,42 @@ export const updateServiceOrderStatusValidator = [
         .isEmpty()
         .withMessage('Status cannot be empty')
         .isIn([
+            // Product-like statuses (for parity with UI)
             'pending',
-            'confirmed', 
+            'confirmed',
+            'processing',
+            'ready_to_ship',
+            'shipped',
+            'in_transit',
+            'out_for_delivery',
+            'delivered',
+            'cancelled',
+            'returned',
+            // Service workflow statuses
             'in_progress',
             'review_ready',
             'revision_requested',
             'completed',
-            'delivered',
-            'cancelled'
         ])
         .withMessage('Invalid service order status'),
+
+    check('trackingNumber')
+        .optional()
+        .isString()
+        .withMessage('Tracking number must be a string')
+        .isLength({ min: 3, max: 50 })
+        .withMessage('Tracking number must be between 3 and 50 characters'),
+
+    check('estimatedDeliveryDate')
+        .optional()
+        .isISO8601()
+        .withMessage('Estimated delivery date must be a valid date')
+        .custom((value) => {
+            if (new Date(value) <= new Date()) {
+                throw new Error('Estimated delivery date must be in the future');
+            }
+            return true;
+        }),
 
     (req, res, next) => validateRequest(req, res, next)
 ]
@@ -52,14 +78,22 @@ export const getServiceOrdersValidator = [
     query('status')
         .optional()
         .isIn([
+            // Product-like statuses (for parity with UI)
             'pending',
-            'confirmed', 
+            'confirmed',
+            'processing',
+            'ready_to_ship',
+            'shipped',
+            'in_transit',
+            'out_for_delivery',
+            'delivered',
+            'cancelled',
+            'returned',
+            // Service workflow statuses
             'in_progress',
             'review_ready',
             'revision_requested',
             'completed',
-            'delivered',
-            'cancelled'
         ])
         .withMessage('Invalid service order status'),
 

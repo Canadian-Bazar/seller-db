@@ -102,7 +102,11 @@ export const getServiceOrders = async (req, res) => {
                     orderId: 1,
                     status: 1,
                     finalPrice: 1,
+                    trackingNumber: 1,
+                    estimatedDeliveryDate: 1,
+                    deliveredAt: 1,
                     createdAt: 1,
+                    updatedAt: 1,
                     'buyer.fullName': 1,
                     'buyer.avatar': 1,
                     'buyer.profilePic': 1,
@@ -199,7 +203,7 @@ export const getServiceOrders = async (req, res) => {
 export const updateServiceOrderStatus = async (req, res) => {
     try {
         const validatedData = matchedData(req);
-        const { orderId, status } = validatedData;
+        const { orderId, status, trackingNumber, estimatedDeliveryDate } = validatedData;
         const sellerId = req.user._id;
 
         const order = await ServiceOrders.findOne({ orderId })
@@ -215,6 +219,18 @@ export const updateServiceOrderStatus = async (req, res) => {
 
         // Update order
         const updateData = { status };
+        
+        if (trackingNumber) {
+            updateData.trackingNumber = trackingNumber;
+        }
+        
+        if (estimatedDeliveryDate) {
+            updateData.estimatedDeliveryDate = new Date(estimatedDeliveryDate);
+        }
+        
+        if (status === 'delivered') {
+            updateData.deliveredAt = new Date();
+        }
        
         const updatedOrder = await ServiceOrders.findOneAndUpdate(
             { orderId },
@@ -340,7 +356,9 @@ export const getServiceOrderById = async (req, res) => {
                     orderId: 1,
                     status: 1,
                     finalPrice: 1,
-                  
+                    trackingNumber: 1,
+                    estimatedDeliveryDate: 1,
+                    deliveredAt: 1,
                     createdAt: 1,
                     updatedAt: 1,
                     billingAddress: 1,
