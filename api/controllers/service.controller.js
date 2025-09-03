@@ -134,9 +134,10 @@ export const getServicesController = async (req, res) => {
     }
 
     // Incomplete status filter
-    if (validatedData.inComplete) {
-      matchStage.isComplete = false;
-    }
+   if (validatedData.inComplete) {
+  matchStage.completionPercentage = { $ne: 100 };
+}
+
 
 
     if (validatedData.isComplete) {

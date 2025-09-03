@@ -47,9 +47,10 @@ export const getProductsController = async (req, res) => {
       matchStage.isVerified = true;
     }
 
-    if (validatedData.inComplete) {
-      matchStage.isComplete = false;
-    }
+ if (validatedData.inComplete) {
+  matchStage.completionPercentage = { $ne: 100 };
+}
+
 
 
     if(validatedData.isComplete){

@@ -17,6 +17,9 @@ export const getServiceOrders = async (req, res) => {
         const effectiveLimit = Math.min(limit, 50);
         const skip = (page - 1) * effectiveLimit;
 
+
+        console.log('seller' , sellerId)
+
         const pipeline = [
             {
                 $lookup: {
@@ -51,6 +54,31 @@ export const getServiceOrders = async (req, res) => {
             },
             {
                 $unwind: '$buyer'
+            },
+            {
+                $lookup: {
+                    from: 'Service',
+                    localField: 'serviceQuotation.serviceId',
+                    foreignField: '_id',
+                    as: 'service'
+                }
+            },
+            {
+                $unwind: '$service'
+            },
+            {
+                $lookup: {
+                    from: 'ServiceMedia',
+                    localField: 'service._id',
+                    foreignField: 'serviceId',
+                    as: 'serviceMedia'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$serviceMedia',
+                    preserveNullAndEmptyArrays: true
+                }
             }
         );
 
@@ -60,6 +88,7 @@ export const getServiceOrders = async (req, res) => {
                 $match: {
                     $or: [
                         { orderId: { $regex: search, $options: 'i' } },
+                        { 'service.name': { $regex: search, $options: 'i' } },
                         { 'serviceQuotation.title': { $regex: search, $options: 'i' } },
                         { 'buyer.fullName': { $regex: search, $options: 'i' } }
                     ]
@@ -73,14 +102,12 @@ export const getServiceOrders = async (req, res) => {
                     orderId: 1,
                     status: 1,
                     finalPrice: 1,
-                  
+                    createdAt: 1,
                     'buyer.fullName': 1,
                     'buyer.avatar': 1,
                     'buyer.profilePic': 1,
-                    'serviceQuotation.title': 1,
-                    'serviceQuotation.description': 1,
-                    'serviceQuotation.minPrice': 1,
-                    'serviceQuotation.maxPrice': 1
+                    'service.name': 1,
+                    'service.images': '$serviceMedia.images'
                 }
             },
             { $sort: { createdAt: -1 } },
@@ -263,6 +290,31 @@ export const getServiceOrderById = async (req, res) => {
             },
             {
                 $lookup: {
+                    from: 'Service',
+                    localField: 'serviceQuotation.serviceId',
+                    foreignField: '_id',
+                    as: 'service'
+                }
+            },
+            {
+                $unwind: '$service'
+            },
+            {
+                $lookup: {
+                    from: 'ServiceMedia',
+                    localField: 'service._id',
+                    foreignField: 'serviceId',
+                    as: 'serviceMedia'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$serviceMedia',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
                     from: 'ServiceChat',
                     localField: 'serviceChatId',
                     foreignField: '_id',
@@ -303,6 +355,14 @@ export const getServiceOrderById = async (req, res) => {
                         profilePic: '$buyer.profilePic',
                         avatar: '$buyer.avatar',
                         companyName: '$buyer.companyName'
+                    },
+                    
+                    service: {
+                        _id: '$service._id',
+                        name: '$service.name',
+                        description: '$service.description',
+                        category: '$service.category',
+                        images: '$serviceMedia.images'
                     },
                     
                     serviceQuotation: {
