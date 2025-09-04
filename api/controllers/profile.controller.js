@@ -156,3 +156,64 @@ export const updateProfile = async (req, res) => {
     handleError(res, error);
   }
 };
+
+export const addCertifications = async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+    const validatedData = matchedData(req);
+    const { certifications } = validatedData;
+
+    const seller = await Seller.findById(sellerId).select('certifications');
+    
+    if (!seller) {
+      throw buildErrorObject(httpStatus.NOT_FOUND, 'Seller not found');
+    }
+
+    // Get existing certifications or initialize empty array
+    const existingCertifications = seller.certifications || [];
+    
+    // Check for duplicate certifications (same name)
+    const duplicates = [];
+    const newCertifications = [];
+    
+    for (const newCert of certifications) {
+      const isDuplicate = existingCertifications.some(
+        existingCert => existingCert.name.toLowerCase() === newCert.name.toLowerCase()
+      );
+      
+      if (isDuplicate) {
+        duplicates.push(newCert.name);
+      } else {
+        newCertifications.push(newCert);
+      }
+    }
+
+    // If there are duplicates, return error
+    if (duplicates.length > 0) {
+      throw buildErrorObject(
+        httpStatus.BAD_REQUEST, 
+        `Certifications already exist: ${duplicates.join(', ')}`
+      );
+    }
+
+    // Add new certifications to existing ones
+    const updatedCertifications = [...existingCertifications, ...newCertifications];
+
+    // Update seller profile
+    const updatedSeller = await Seller.findByIdAndUpdate(
+      sellerId,
+      { certifications: updatedCertifications },
+      { new: true, runValidators: true }
+    ).select('certifications');
+
+    return res.status(httpStatus.OK).json(
+      buildResponse(httpStatus.OK, {
+        message: `${newCertifications.length} certification(s) added successfully`,
+        certifications: updatedSeller.certifications
+      })
+    );
+
+  } catch (error) {
+    handleError(res, error);
+  }
+};

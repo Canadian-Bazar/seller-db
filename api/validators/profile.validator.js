@@ -193,6 +193,34 @@ export const getProfileValidator =[
     (req, res, next) => validateRequest(req, res, next)
 ]
 
+export const addCertificationsValidator = [
+  check('certifications')
+    .exists({ checkFalsy: true })
+    .withMessage('Certifications array is required')
+    .isArray({ min: 1 })
+    .withMessage('Certifications must be a non-empty array'),
+
+  check('certifications.*.name')
+    .exists({ checkFalsy: true })
+    .withMessage('Certification name is required')
+    .isString()
+    .withMessage('Certification name must be a string')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Certification name must be between 1 and 100 characters'),
+
+  check('certifications.*.url')
+    .exists({ checkFalsy: true })
+    .withMessage('Certification URL is required')
+    .isString()
+    .withMessage('Certification URL must be a string')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Certification URL cannot be empty') ,
+    
+  (req, res, next) => validateRequest(req, res, next)
+]
+
 
 
 

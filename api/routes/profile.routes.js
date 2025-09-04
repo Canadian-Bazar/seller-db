@@ -27,4 +27,10 @@ router.put(
   profileController.updateProfile
 )
 
+router.put(
+  '/certifications',
+  profileValidator.addCertificationsValidator,
+  profileController.addCertifications
+)
+
 export default router
