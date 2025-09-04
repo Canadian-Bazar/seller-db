@@ -37,8 +37,14 @@ const ServiceMediaSchema = new mongoose.Schema({
 
         industryCertifications:[
             {
-                type:mongoose.Schema.Types.ObjectId ,
-                ref:'Certifications'
+                name: {
+                    type: String,
+                    required: true
+                },
+                url: {
+                    type: String,
+                    required: true
+                }
             }
         ] ,
 

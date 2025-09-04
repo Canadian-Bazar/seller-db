@@ -3,10 +3,10 @@ import buildResponse from '../utils/buildResponse.js'
 import buildErrorObject from '../utils/buildErrorObject.js'
 import Services from '../models/service.schema.js'
 import ServiceMedia from '../models/service-media.schema.js'
+import Seller from '../models/seller.schema.js'
 import { matchedData } from 'express-validator'
 import httpStatus from 'http-status';
 import { markStepCompleteAsync } from '../helpers/markStepComplete.js'
-import Certifications from '../models/certifications.schema.js'
 
 export const syncServiceMediaController = async (req, res) => {
     try {
@@ -19,16 +19,33 @@ export const syncServiceMediaController = async (req, res) => {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such service found');
         }
 
-        if(industryCertifications.length>0){
-            const certifications = await Certifications.find({_id:{
-                $in:industryCertifications ,
+        if(industryCertifications.length > 0){
+            // Get seller's profile to validate certifications
+            const sellerId = req.user._id;
+            const seller = await Seller.findById(sellerId).select('certifications').lean().exec();
+            
+            if (!seller) {
+                throw buildErrorObject(httpStatus.NOT_FOUND, 'Seller not found');
+            }
+
+            const sellerCertifications = seller.certifications || [];
+            
+            // Check if all provided certifications exist in seller's profile
+            const invalidCertifications = [];
+            
+            for (const providedCert of industryCertifications) {
+                const matchingCert = sellerCertifications.find(sellerCert => 
+                    sellerCert.name === providedCert.name && sellerCert.url === providedCert.url
+                );
                 
-            } , isActive:true ,
-                isDeleted:false})
+                if (!matchingCert) {
+                    invalidCertifications.push(`${providedCert.name} (${providedCert.url})`);
+                }
+            }
 
-
-            if(certifications.length !== industryCertifications.length){
-                throw buildErrorObject(httpStatus.BAD_REQUEST, 'One or more certifications are invalid');
+            if(invalidCertifications.length > 0){
+                throw buildErrorObject(httpStatus.BAD_REQUEST, 
+                    `Invalid certifications: ${invalidCertifications.join(', ')}. Please add them to your profile first.`);
             }
         }
 
@@ -70,7 +87,7 @@ export const getServiceMediaController = async (req, res) => {
             throw buildErrorObject(httpStatus.BAD_REQUEST, 'No such service found');
         }
 
-        const media = await ServiceMedia.findOne({ serviceId: serviceId }).populate('industryCertifications' , '-isDeleted -isActive -createdAt -updatedAt -__v').lean().exec();
+        const media = await ServiceMedia.findOne({ serviceId: serviceId }).lean().exec();
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, media)

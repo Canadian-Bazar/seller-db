@@ -75,10 +75,25 @@ export const validateSyncServiceMedia = [
         .isArray()
         .withMessage('Industry certifications must be a non-empty array'),
 
-    check('industryCertifications.*')
+    check('industryCertifications.*.name')
         .if(check('industryCertifications').isArray({ min: 1 }))
-        .isMongoId()
-        .withMessage('Each certification must be a valid Mongo ID') ,
+        .exists({ checkFalsy: true })
+        .withMessage('Certification name is required')
+        .isString()
+        .withMessage('Certification name must be a string')
+        .trim()
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Certification name must be between 1 and 100 characters'),
+
+    check('industryCertifications.*.url')
+        .if(check('industryCertifications').isArray({ min: 1 }))
+        .exists({ checkFalsy: true })
+        .withMessage('Certification URL is required')
+        .isString()
+        .withMessage('Certification URL must be a string')
+        .trim()
+        .isLength({ min: 1 })
+        .withMessage('Certification URL cannot be empty') ,
      
 
 
