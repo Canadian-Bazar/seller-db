@@ -134,18 +134,21 @@ check('companyWebsite')
     .withMessage('Invalid social media URL'),
 
   check('languagesSupported')
+    .optional()
     .notEmpty()
     .withMessage('Languages supported is required')
     .isArray({ min: 1 })
     .withMessage('Languages supported must be an array with at least one language'),
 
   check('languagesSupported.*.name')
+    .optional()
     .notEmpty()
     .withMessage('Language name is required')
     .isString()
     .withMessage('Language name must be a string'),
 
   check('languagesSupported.*.code')
+    .optional()
     .notEmpty()
     .withMessage('Language code is required')
     .isString()
