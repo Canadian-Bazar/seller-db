@@ -83,6 +83,21 @@ export const getAllServiceQuotationsController = async (req, res) => {
       
       {
         $lookup: {
+          from: 'ServiceMedia',
+          localField: 'serviceId',
+          foreignField: 'serviceId',
+          as: 'serviceMedia'
+        }
+      },
+      {
+        $unwind: {
+          path: '$serviceMedia',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      
+      {
+        $lookup: {
           from: 'ServiceChat',
           localField: '_id',
           foreignField: 'quotation',
@@ -139,7 +154,7 @@ export const getAllServiceQuotationsController = async (req, res) => {
           createdAt: 1,
           
           serviceName: '$serviceDetails.name',
-          serviceImage: { $arrayElemAt: ['$serviceDetails.images', 0] },
+          serviceImages: { $slice: ['$serviceMedia.images', 2] },
           
           buyerName: '$buyerDetails.fullName',
           buyerProfilePic: '$buyerDetails.profilePic',
@@ -563,6 +578,21 @@ export const getServiceQuotationById = async (req, res) => {
                 
                 {
                     $lookup: {
+                        from: 'ServiceMedia',
+                        localField: 'serviceId',
+                        foreignField: 'serviceId',
+                        as: 'serviceMedia'
+                    }
+                },
+                {
+                    $unwind: {
+                        path: '$serviceMedia',
+                        preserveNullAndEmptyArrays: true
+                    }
+                },
+                
+                {
+                    $lookup: {
                         from: 'Buyer',
                         localField: 'buyer',
                         foreignField: '_id',
@@ -653,7 +683,7 @@ export const getServiceQuotationById = async (req, res) => {
             updatedAt: quotation.updatedAt,
             
             serviceName: quotation.serviceDetails?.name,
-            serviceImages: quotation.serviceDetails?.images?.slice(0, 3),
+            serviceImages: quotation.serviceMedia?.images?.slice(0, 2),
             
             buyerName: quotation.buyerDetails?.fullName,
             buyerProfilePic: quotation.buyerDetails?.profilePic,
