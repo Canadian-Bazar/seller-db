@@ -50,7 +50,7 @@ export const getReviewsByServiceId = async (req, res) => {
         }
 
         const docs = await ServiceReview.find(query)
-            .populate('buyer', 'name email profilePic avatar')
+            .populate('buyer', 'fullName email profilePic avatar')
             .sort(sort)
             .skip(skip)
             .limit(limit)
@@ -147,7 +147,7 @@ export const getAllServiceReviewsForSeller = async (req, res) => {
                 console.log(sort)
 
         const docs = await ServiceReview.find(reviewQuery)
-            .populate('buyer', 'name email profilePic avatar')
+            .populate('buyer', 'fullName  profilePic avatar')
             .populate('service', 'name')
             .sort(sort)
             .skip(skip)
