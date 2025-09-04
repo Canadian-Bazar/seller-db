@@ -10,8 +10,6 @@ const ServiceSchema = new mongoose.Schema({
     } ,
 
 
-
-
     seller: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Sellers',

@@ -11,28 +11,28 @@ export const validateSyncProductVariations = [
         .isArray()
         .withMessage('Variations must be an array'),
 
-    check('variations.*.field')
-        .if(check('variations').isArray({ min: 1 }))
-        .exists({ checkFalsy: true })
-        .withMessage('Variation field is required')
-        .isString()
-        .withMessage('Variation field must be a string')
-        .trim()
-        .isLength({ min: 1, max: 50 })
-        .withMessage('Variation field must be between 1 and 50 characters'),
+    // check('variations.*.field')
+    //     .if(check('variations').isArray({ min: 1 }))
+    //     .exists({ checkFalsy: true })
+    //     .withMessage('Variation field is required')
+    //     .isString()
+    //     .withMessage('Variation field must be a string')
+    //     .trim()
+    //     .isLength({ min: 1, max: 50 })
+    //     .withMessage('Variation field must be between 1 and 50 characters'),
 
-    check('variations.*.values')
-        .if(check('variations').isArray({ min: 1 }))
-        .isArray({ min: 1 })
-        .withMessage('Variation values must be a non-empty array'),
+    // check('variations.*.values')
+    //     .if(check('variations').isArray({ min: 1 }))
+    //     .isArray({ min: 1 })
+    //     .withMessage('Variation values must be a non-empty array'),
 
-    check('variations.*.values.*')
-        .if(check('variations').isArray({ min: 1 }))
-        .isString()
-        .withMessage('Each variation value must be a string')
-        .trim()
-        .isLength({ min: 1, max: 100 })
-        .withMessage('Each variation value must be between 1 and 100 characters'),
+    // check('variations.*.values.*')
+    //     .if(check('variations').isArray({ min: 1 }))
+    //     .isString()
+    //     .withMessage('Each variation value must be a string')
+    //     .trim()
+    //     .isLength({ min: 1, max: 100 })
+    //     .withMessage('Each variation value must be between 1 and 100 characters'),
 
     check('customizableOptions')
         .optional()
@@ -52,8 +52,8 @@ export const validateSyncProductVariations = [
     check('customizableOptions.*.quantity')
         .if(check('customizableOptions').isArray({ min: 1 }))
         .optional()
-        .isInt({ min: 0 })
-        .withMessage('Customizable option quantity must be a non-negative integer'),
+        .isString()
+        .withMessage('Customizable option quantity must be a string'),
 
     (req , res  , next)=>validateRequest(req ,res , next)
 ]
