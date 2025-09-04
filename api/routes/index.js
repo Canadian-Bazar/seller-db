@@ -24,7 +24,7 @@ import serviceInfoRoutes from './service-info.routes.js'
 import serviceCapabilitiesRoutes from './service-capabilities.routes.js'
 import serviceCustomizationRoutes from './service-customization.routes.js'
 import serviceMediaRoutes from './service-media.routes.js'
-import serviceOrderRoutes from './service-order.routes.js'
+import serviceOrdersRoutes from './service-orders.routes.js'
 import servicePricingRoutes from './service-pricing.routes.js'
 import dashboardRoutes from './dashboard.routes.js'
 import careerRoutes from './career.routes.js'
@@ -37,6 +37,8 @@ import claimStoreRoutes from './claim-stores.routes.js'
 import certificationRoutes from './certifications.routes.js'
 import serviceInvoiceRoutes from './service-invoice.routes.js'
 import serviceReviewRoutes from './service-reviews.routes.js'
+import serviceOrderRoutes from './service-order.route.js'
+
 
 
 
@@ -69,7 +71,7 @@ v1Routes.use('/service-info', serviceInfoRoutes)
 v1Routes.use('/service-capabilities', serviceCapabilitiesRoutes)
 v1Routes.use('/service-customization', serviceCustomizationRoutes)
 v1Routes.use('/service-media', serviceMediaRoutes)
-v1Routes.use('/service-orders', serviceOrderRoutes)
+v1Routes.use('/service-orders', serviceOrdersRoutes)
 v1Routes.use('/service-pricing', servicePricingRoutes)
 v1Routes.use('/dashboard', dashboardRoutes)
 v1Routes.use('/career', careerRoutes)
@@ -82,6 +84,8 @@ v1Routes.use('/claim-stores', claimStoreRoutes)
 v1Routes.use('/certifications', certificationRoutes)
 v1Routes.use('/service-invoice', serviceInvoiceRoutes)
 v1Routes.use('/service-review' , serviceReviewRoutes)
+v1Routes.use('/service-order' , serviceOrderRoutes)
+
 
 
 

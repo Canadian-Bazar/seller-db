@@ -1,7 +1,7 @@
 import express from 'express'
 import trimRequest from 'trim-request'
 import { requireAuth } from '../middlewares/auth.middleware.js'
-import * as serviceOrderValidators from '../validators/service-order.validators.js'
+import * as serviceOrderValidators from '../validators/service-orders.validators.js'
 import * as serviceOrderControllers from '../controllers/service-orders.controller.js'
 
 const router = express.Router()
