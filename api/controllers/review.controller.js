@@ -50,7 +50,7 @@ export const getReviewsByProductId = async (req, res) => {
         }
 
         const docs = await Review.find(query)
-            .populate('buyer', 'name email profilePic avatar')
+            .populate('buyer', 'fullName email profilePic avatar')
             .sort(sort)
             .skip(skip)
             .limit(limit)
@@ -150,7 +150,7 @@ export const getAllReviewsForSeller = async (req, res) => {
                 console.log(sort)
 
         const docs = await Review.find(reviewQuery)
-            .populate('buyer', 'name email profilePic avatar')
+            .populate('buyer', 'fullName email profilePic avatar')
             .populate('product', 'name')
             .sort(sort)
             .skip(skip)

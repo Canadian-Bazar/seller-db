@@ -52,8 +52,10 @@ export const validateUpdateProduct = [
     }),
 
       check('moq')
-        .optional()
-        .isInt({ min: 1 }).withMessage('Minimum order quantity must be a number greater than or equal to 1') ,
+  .optional({ nullable: true, checkFalsy: true }) // allows undefined, null, '' (empty string)
+  .isInt({ min: 1 })
+  .withMessage('Minimum order quantity must be a number greater than or equal to 1') ,
+
 
   
 

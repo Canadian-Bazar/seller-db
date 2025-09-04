@@ -324,7 +324,11 @@ export const updateProductInfoController = async (req, res) => {
         const validatedData = matchedData(req);
         const userId = req.user._id;
         const { productId } = req.params;
-        const { name, categoryId, about } = validatedData;
+        const { name, categoryId, about , moq=null } = validatedData;
+
+
+
+
 
         const productExists = await Products.exists({ _id: productId, seller: userId });
         if (!productExists) {
@@ -344,7 +348,15 @@ export const updateProductInfoController = async (req, res) => {
             }
             updateData.categoryId = categoryId;
         }
+
+        updateData.moq=moq
+
+
+
+      
         
+
+
         if (about !== undefined) {
             updateData.about = about;
         }
