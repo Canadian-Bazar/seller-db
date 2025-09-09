@@ -227,3 +227,118 @@ export const getWebsiteQuotationsById = [
     (req ,res , next) =>validateRequest(req , res, next)
 ]
 
+export const editWebsiteQuotationValidator = [
+    param('id')
+        .exists({ checkFalsy: true })
+        .withMessage('ID is required')
+        .isMongoId()
+        .withMessage('ID must be a valid MongoDB ObjectId'),
+
+    check('category')
+        .optional()
+        .isMongoId()
+        .withMessage('Category must be a valid MongoDB ObjectId'),
+
+    check('itemsSold')
+        .optional()
+        .isString()
+        .withMessage('Items sold must be a string')
+        .trim()
+        .isLength({ min: 1, max: 1000 })
+        .withMessage('Items sold must be between 1 and 1000 characters'),
+
+    check('domainName')
+        .optional()
+        .isString()
+        .withMessage('Domain name must be a string')
+        .trim()
+        .isLength({ min: 1, max: 100 })
+        .withMessage('Domain name must be between 1 and 100 characters'),
+
+    check('websiteUrl')
+        .optional({ nullable: true })
+        .isURL()
+        .withMessage('Website URL must be a valid URL'),
+
+    check('referenceurl')
+        .optional({ nullable: true })
+        .isURL()
+        .withMessage('Reference URL must be a valid URL'),
+
+    check('referenceWebTemplates')
+        .optional({ nullable: true })
+        .isArray()
+        .withMessage('References must be an array'),
+
+    check('referenceWebTemplates.*')
+        .if(check('referenceWebTemplates').isArray())
+        .isMongoId()
+        .withMessage('Each reference should be a valid MongoID'),
+
+    check('additionalDetails')
+        .optional({ nullable: true })
+        .isString()
+        .withMessage('Additional details must be a string')
+        .trim()
+        .isLength({ max: 2000 })
+        .withMessage('Additional details cannot exceed 2000 characters'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const acceptWebsiteQuotationValidator = [
+    check('quotationId')
+        .exists({ checkFalsy: true })
+        .withMessage('Quotation ID is required')
+        .isMongoId()
+        .withMessage('Quotation ID must be a valid MongoDB ObjectId'),
+
+    check('message')
+        .optional()
+        .isString()
+        .withMessage('Message must be a string')
+        .trim()
+        .isLength({ max: 1000 })
+        .withMessage('Message cannot exceed 1000 characters'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const rejectWebsiteQuotationValidator = [
+    check('quotationId')
+        .exists({ checkFalsy: true })
+        .withMessage('Quotation ID is required')
+        .isMongoId()
+        .withMessage('Quotation ID must be a valid MongoDB ObjectId'),
+
+    check('rejectionReason')
+        .exists({ checkFalsy: true })
+        .withMessage('Rejection reason is required')
+        .isString()
+        .withMessage('Rejection reason must be a string')
+        .trim()
+        .isLength({ min: 10, max: 500 })
+        .withMessage('Rejection reason must be between 10 and 500 characters'),
+
+    check('message')
+        .optional()
+        .isString()
+        .withMessage('Message must be a string')
+        .trim()
+        .isLength({ max: 1000 })
+        .withMessage('Message cannot exceed 1000 characters'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+
+export const getWebsiteQuotationsForAdmin = [
+    ...paginationValidator,
+    
+    check('status')
+        .optional()
+        .isIn(['pending', 'approved', 'rejected'])
+        .withMessage('Invalid status'),
+
+    (req, res, next) => validateRequest(req, res, next)
+]
+

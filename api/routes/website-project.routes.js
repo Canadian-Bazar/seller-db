@@ -5,14 +5,10 @@ import { requireAuth } from '../middlewares/auth.middleware.js'
 
 const websiteProjectRouter = express.Router()
 
+
 websiteProjectRouter.use(requireAuth)
 
-// Get all website projects with pagination
-websiteProjectRouter.get(
-   '/',
-   websiteProjectValidators.validateGetAllWebsiteProjects,
-   websiteProjectControllers.getAllWebsiteProjectsController
-)
+
 
 
 websiteProjectRouter.get(
@@ -21,17 +17,14 @@ websiteProjectRouter.get(
    websiteProjectControllers.getCurrentProjectStatusController
 )
 
- websiteProjectRouter.get(
+
+
+websiteProjectRouter.patch(
    '/:id',
-   websiteProjectValidators.validateGetWebsiteProjectById,
-   websiteProjectControllers.getWebsiteProjectByIdController
+   websiteProjectValidators.validateUpdateWebsiteProjectSellerInputs,
+   websiteProjectControllers.updateWebsiteProjectSellerInputsController
 )
 
-// Update report only
-websiteProjectRouter.put(
-   '/:id',
-   websiteProjectValidators.validateUpdateWebsiteProjectReport,
-   websiteProjectControllers.updateWebsiteProjectReportController
-)
+
 
 export default websiteProjectRouter

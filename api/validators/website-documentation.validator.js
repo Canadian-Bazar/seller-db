@@ -1,6 +1,7 @@
 import express from 'express'
 import { check , query , param } from 'express-validator';
 import validateRequest from '../utils/validateRequest.js';
+import { paginationValidator } from './pagination.validator.js';
 
 
 export const validateCreateWebsiteDocumentation = [
@@ -96,6 +97,27 @@ export const validateGetWebsiteDocumentation = [
         .trim()
         .isLength({ min: 10 })
         .withMessage('Token format is invalid'),
+
+    (req, res, next) => validateRequest(req, res, next)
+];
+
+export const getAllWebsiteDocumentationsValidator = [
+    ...paginationValidator,
+    
+    check('status')
+        .optional()
+        .isIn(['pending', 'approved', 'rejected'])
+        .withMessage('Invalid status'),
+
+    (req, res, next) => validateRequest(req, res, next)
+];
+
+export const getWebsiteDocumentationByIdValidator = [
+    param('id')
+        .exists({ checkFalsy: true })
+        .withMessage('Documentation ID is required')
+        .isMongoId()
+        .withMessage('Documentation ID must be a valid MongoDB ObjectId'),
 
     (req, res, next) => validateRequest(req, res, next)
 ];

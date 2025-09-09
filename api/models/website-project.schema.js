@@ -41,7 +41,7 @@ const WebsiteProjectSchema = new mongoose.Schema({
   
   paymentStatus: {
     type: String,
-    enum: ['pending', 'paid', 'failed'],
+    enum: ['pending', 'paid', 'failed' , 'partial_payment'],
     default: 'pending'
   },
   
@@ -54,17 +54,38 @@ const WebsiteProjectSchema = new mongoose.Schema({
   expectedCompletionDate: Date,
   actualCompletionDate: Date,
   
-  notes: String ,
+  notes: String,
 
-  report:String  ,
+  report: String,
+  additionalDetails: String,
+  report2: String,
+  anyChanges: String,
+  additionalSuggestions: String,
+  websiteOverviewLink: String,
 
   percentageCompletion:{
-    type :Number ,
-    default:0
-  } ,
+    type: Number,
+    default: 0
+  },
 
-  amountPaid:Number ,
-  amountPending:Number
+  amountPaid: Number,
+  amountPending: Number,
+
+  // Final payment token for remaining 50% payment
+  completionPaymentToken: {
+    type: String,
+    unique: true,
+    sparse: true // Only create index for non-null values
+  },
+  hasPaymentLink: {
+    type: Boolean,
+    default: false
+  },
+  linkExpiry: Date,
+  finalPaymentCompleted: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true,
   collection: 'WebsiteProjects'

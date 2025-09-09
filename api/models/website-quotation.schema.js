@@ -50,12 +50,30 @@ const WebsiteQuotationSchema = new mongoose.Schema({
 
     additionalDetails:{
         type:String ,
-    } 
+    },
 
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
 
+    adminResponse: {
+        message: {
+            type: String
+        },
+        respondedBy: {
+            type: mongoose.Types.ObjectId,
+            ref: 'Admin'
+        },
+        respondedAt: {
+            type: Date
+        }
+    },
 
-
-
+    rejectionReason: {
+        type: String
+    }
 
 } , 
 
