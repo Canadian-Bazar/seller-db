@@ -78,7 +78,6 @@ export const createPaymentIntentController = async (req, res) => {
  * @param {Object} res - Express response object used to send the response.
  */
 export const stripeWebhookController = async (req, res) => {
-  console.log('hi')
   const sig = req.headers['stripe-signature']
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 

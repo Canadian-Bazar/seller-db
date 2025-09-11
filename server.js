@@ -20,6 +20,7 @@ import v1Routes from './api/routes/index.js'
 import buildErrorObject from './api/utils/buildErrorObject.js'
 import init from './config/mongo.js'
 import sessionManager from './config/sessionManager.js'
+import { initializeAnalyticsServices } from './api/startup/analytics-services.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -44,6 +45,10 @@ init().then((dbStatus) => {
 
   verifyAWSConnection()
 
+  // 🚀 Initialize Analytics Services
+  initializeAnalyticsServices().catch(error => {
+    console.error('❌ Failed to start analytics services:', error)
+  })
 
   api.use(bodyParser.json({ limit: '32mb' }))
   api.use(bodyParser.urlencoded({ limit: '32mb', extended: false }))

@@ -180,6 +180,8 @@ export const getServicesController = async (req, res) => {
         // Full service schema fields
         name: 1,
         description: 1,
+        avgRating: 1,
+        ratingsCount: 1,
         isComplete: 1,
         completionPercentage: 1,
         incompleteSteps: 1,

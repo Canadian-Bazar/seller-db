@@ -33,6 +33,9 @@ export const syncProductAttributesController = async (req, res) => {
 
         await deletePromise;
 
+
+        console.log("hii")
+
         if (payload.length > 0) {
 
             console.log('Inserting attributes:', payload);

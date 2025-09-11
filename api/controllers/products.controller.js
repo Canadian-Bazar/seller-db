@@ -124,6 +124,7 @@ export const getProductsController = async (req, res) => {
         name: 1,
         isVerified: 1,
         avgRating: 1,
+        ratingsCount: 1,
         images: 1,
         minPrice: 1,
         maxPrice: 1,
