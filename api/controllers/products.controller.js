@@ -219,7 +219,7 @@ export const getProductNamesController = async (req, res) => {
 
     const matchStage = {
       seller: req.user._id,
-      isComplete:true
+      completetionPercentage:100
     };
 
     if (validatedData.search) {

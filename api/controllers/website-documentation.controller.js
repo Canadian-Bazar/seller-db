@@ -32,6 +32,67 @@ export const generateWebsiteDocumentationToken = (id) => {
 export const createWebsiteDocumentationController = async (req, res) => {
 
 };
+
+export const rejectWebsiteDocumentationController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req);
+    const { token, rejectionReason, feedback } = validatedData;
+
+    try {
+      const decoded = jwt.verify(token, process.env.DOCUMENTATION_SECRET);
+      const { documentationId } = decoded;
+
+      const websiteDocumentation = await WebsiteDocumentation.findById(documentationId)
+        .populate({
+          path: 'websiteQuotationId',
+          populate: {
+            path: 'seller',
+            select: 'companyName email'
+          }
+        });
+
+      if (!websiteDocumentation) {
+        throw buildErrorObject(httpStatus.NOT_FOUND, 'Website documentation not found');
+      }
+
+      if (websiteDocumentation.status !== 'pending') {
+        throw buildErrorObject(httpStatus.BAD_REQUEST, 'Documentation has already been processed');
+      }
+
+      // Update documentation status to rejected
+      websiteDocumentation.status = 'rejected';
+      websiteDocumentation.rejectionReason = rejectionReason;
+      websiteDocumentation.feedback = feedback;
+      websiteDocumentation.rejectedAt = new Date();
+
+      await websiteDocumentation.save();
+
+      // TODO: Send socket event to admin about documentation rejection
+      // This will notify admin to create new documentation
+
+      return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, 
+        'Documentation rejected successfully. Admin has been notified to provide updated documentation.', 
+        {
+          status: 'rejected',
+          rejectionReason,
+          feedback
+        }
+      ));
+
+    } catch (tokenError) {
+      if (tokenError.name === 'TokenExpiredError') {
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Documentation access token has expired');
+      } else if (tokenError.name === 'JsonWebTokenError') {
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Invalid documentation access token');
+      } else {
+        throw buildErrorObject(httpStatus.UNAUTHORIZED, 'Token verification failed');
+      }
+    }
+
+  } catch (err) {
+    handleError(res, err);
+  }
+};
 export const getWebsiteDocumentationController = async (req, res) => {
   try {
     const validatedData = matchedData(req);

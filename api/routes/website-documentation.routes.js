@@ -26,5 +26,11 @@ websiteDocumentationRouter.put(
     websiteDocumentationControllers.getWebsiteDocumentationController
 )
 
+websiteDocumentationRouter.patch(
+    '/reject',
+    websiteDocumentationValidators.validateRejectWebsiteDocumentation,
+    websiteDocumentationControllers.rejectWebsiteDocumentationController
+)
+
 
 export default websiteDocumentationRouter   

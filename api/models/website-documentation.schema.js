@@ -75,6 +75,21 @@ const WebsiteDocumentationSchema = new mongoose.Schema({
       default:'pending'
 
     } ,
+
+    rejectionReason: {
+      type: String,
+      required: false
+    },
+
+    feedback: {
+      type: String,
+      required: false
+    },
+
+    rejectedAt: {
+      type: Date,
+      required: false
+    },
   
 
 

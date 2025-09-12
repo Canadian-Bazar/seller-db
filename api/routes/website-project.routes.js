@@ -19,10 +19,16 @@ websiteProjectRouter.get(
 
 
 
-websiteProjectRouter.patch(
-   '/:id',
+websiteProjectRouter.put(
+   '/:id/seller-inputs',
    websiteProjectValidators.validateUpdateWebsiteProjectSellerInputs,
    websiteProjectControllers.updateWebsiteProjectSellerInputsController
+)
+
+websiteProjectRouter.put(
+   '/:id/seller',
+   websiteProjectValidators.validateUpdateWebsiteProjectSeller,
+   websiteProjectControllers.updateWebsiteProjectSellerController
 )
 
 

@@ -273,11 +273,63 @@ export const getCurrentProjectStatusController = async (req, res) => {
         .json(buildResponse(httpStatus.OK, { ...currentProject, statusMessage, chatId }));
     }
 
-    const quotationExists = await WebsiteQuotation.findOne({ seller: sellerId  , status:'pending'});
+    const quotationExists = await WebsiteQuotation.findOne({ seller: sellerId, status: 'pending' });
     if (quotationExists) {
       return res
         .status(httpStatus.OK)
-        .json(buildResponse(httpStatus.OK,  "Your request has been submitted" ));
+        .json(buildResponse(httpStatus.OK, "Your request has been submitted"));
+    }
+
+    // Check if there's documentation available (approved quotation with documentation)
+    const approvedQuotation = await WebsiteQuotation.findOne({ 
+      seller: sellerId, 
+      status: 'approved' 
+    }).populate({
+      path: 'category',
+      select: 'name'
+    }).populate({
+      path: 'referenceWebTemplates',
+      select: 'name url'
+    });
+
+    if (approvedQuotation) {
+      // Check if documentation exists for this quotation
+      const documentation = await WebsiteDocumentation.findOne({ 
+        websiteQuotationId: approvedQuotation._id,
+        status: 'pending' // Show pending documentation to seller
+      });
+
+      if (documentation) {
+        // Return documentation data in project-like format so frontend can handle it
+        const documentationResponse = {
+          _id: null, // No project ID
+          projectStatus: 'documentation_created',
+          paymentStatus: 'pending',
+          websiteQuotation: {
+            _id: approvedQuotation._id,
+            domainName: approvedQuotation.domainName,
+            referenceurl: approvedQuotation.referenceurl,
+            itemsSold: approvedQuotation.itemsSold,
+            additionalDetails: approvedQuotation.additionalDetails,
+            category: approvedQuotation.category,
+            referenceWebTemplates: approvedQuotation.referenceWebTemplates
+          },
+          websiteDocumentation: {
+            _id: documentation._id,
+            documentation: documentation.documentation,
+            token: documentation.token,
+            pricingPlans: documentation.pricingPlans,
+            status: documentation.status,
+            createdAt: documentation.createdAt
+          },
+          statusMessage: "Documentation has been created. Please review and select a plan to proceed with payment.",
+          chatId: null,
+          createdAt: documentation.createdAt,
+          updatedAt: documentation.updatedAt
+        };
+
+        return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, documentationResponse));
+      }
     }
 
     throw buildErrorObject(httpStatus.NOT_FOUND, "No project found for this seller");

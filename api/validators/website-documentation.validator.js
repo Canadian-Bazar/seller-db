@@ -121,3 +121,33 @@ export const getWebsiteDocumentationByIdValidator = [
 
     (req, res, next) => validateRequest(req, res, next)
 ];
+
+export const validateRejectWebsiteDocumentation = [
+    check('token')
+        .exists({ checkFalsy: true })
+        .withMessage('Token is required')
+        .isString()
+        .withMessage('Token must be a string')
+        .trim()
+        .isLength({ min: 10 })
+        .withMessage('Token format is invalid'),
+
+    check('rejectionReason')
+        .exists({ checkFalsy: true })
+        .withMessage('Rejection reason is required')
+        .isString()
+        .withMessage('Rejection reason must be a string')
+        .trim()
+        .isLength({ min: 5, max: 500 })
+        .withMessage('Rejection reason must be between 5 and 500 characters'),
+
+    check('feedback')
+        .optional()
+        .isString()
+        .withMessage('Feedback must be a string')
+        .trim()
+        .isLength({ max: 1000 })
+        .withMessage('Feedback cannot exceed 1000 characters'),
+
+    (req, res, next) => validateRequest(req, res, next)
+];
