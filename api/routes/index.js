@@ -40,6 +40,7 @@ import serviceReviewRoutes from './service-reviews.routes.js'
 import serviceOrderRoutes from './service-order.route.js'
 import serviceAnalyticsRoutes from './service-analytics.routes.js'
 import servicePerformanceRoutes from './service-performance.routes.js'
+import locationRoutes from './location.routes.js'
 
 
 
@@ -89,6 +90,7 @@ v1Routes.use('/service-review' , serviceReviewRoutes)
 v1Routes.use('/service-order' , serviceOrderRoutes)
 v1Routes.use('/service-analytics', serviceAnalyticsRoutes)
 v1Routes.use('/service-performance', servicePerformanceRoutes)
+v1Routes.use('/location', locationRoutes)
 
 
 

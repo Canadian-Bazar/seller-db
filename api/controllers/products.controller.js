@@ -118,6 +118,42 @@ export const getProductsController = async (req, res) => {
     pipeline.push({ $skip: offset });
     pipeline.push({ $limit: limit });
 
+    // Lookup reviews to compute avg rating and count per product
+    pipeline.push({
+      $lookup: {
+        from: 'Review',
+        let: { productId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$product', '$$productId'] } } },
+          { $group: { _id: null, avgRating: { $avg: '$rating' }, ratingsCount: { $sum: 1 } } }
+        ],
+        as: 'ratingData'
+      }
+    })
+
+    // Flatten computed ratings
+    pipeline.push({
+      $addFields: {
+        avgRating: {
+          $round: [
+            {
+              $ifNull: [
+                { $arrayElemAt: ['$ratingData.avgRating', 0] },
+                { $ifNull: ['$avgRating', 0] }
+              ]
+            },
+            1
+          ]
+        },
+        ratingsCount: {
+          $ifNull: [ { $arrayElemAt: ['$ratingData.ratingsCount', 0] }, { $ifNull: ['$ratingsCount', 0] } ]
+        }
+      }
+    })
+
+    // Remove temp fields before projecting
+    pipeline.push({ $unset: 'ratingData' })
+
     // Final projection
     pipeline.push({
       $project: {
@@ -135,8 +171,7 @@ export const getProductsController = async (req, res) => {
         isComplete:1 ,
         completionPercentage:1 ,
         incompleteSteps: 1 ,
-
-
+        
 
         // From stats
         viewCount: '$stats.viewCount',
@@ -210,7 +245,7 @@ export const getProductNamesController = async (req, res) => {
       currentPage: page,
     };
 
-    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK ,  hresponse));
+    return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK ,  response));
   } catch (err) {
     return handleError(res, err);
   }

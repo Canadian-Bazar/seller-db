@@ -157,10 +157,37 @@ export const getServicesController = async (req, res) => {
     });
 
     // Unwind media data (optional - keeps services without media)
+    pipeline.push({ $unwind: { path: '$mediaData', preserveNullAndEmptyArrays: true } });
+
+    // Lookup Category for name
     pipeline.push({
-      $unwind: {
-        path: '$mediaData',
-        preserveNullAndEmptyArrays: true
+      $lookup: {
+        from: 'Category',
+        localField: 'category',
+        foreignField: '_id',
+        as: 'categoryData'
+      }
+    });
+    pipeline.push({ $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true } });
+
+    // Lookup Service Order for moq and lead time
+    pipeline.push({
+      $lookup: {
+        from: 'ServiceOrderSchema',
+        localField: '_id',
+        foreignField: 'serviceId',
+        as: 'orderData'
+      }
+    });
+    pipeline.push({ $unwind: { path: '$orderData', preserveNullAndEmptyArrays: true } });
+
+    // Lookup Service Customization to derive isCustomizable
+    pipeline.push({
+      $lookup: {
+        from: 'ServiceCustomization',
+        localField: '_id',
+        foreignField: 'serviceId',
+        as: 'customData'
       }
     });
 
@@ -174,7 +201,53 @@ export const getServicesController = async (req, res) => {
     pipeline.push({ $skip: offset });
     pipeline.push({ $limit: limit });
 
-    // Final projection - full service schema + few images
+    // Lookup service reviews to compute avg rating and count
+    pipeline.push({
+      $lookup: {
+        from: 'ServiceReview',
+        let: { serviceId: '$_id' },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$service', '$$serviceId'] } } },
+          { $group: { _id: null, avgRating: { $avg: '$rating' }, ratingsCount: { $sum: 1 } } }
+        ],
+        as: 'ratingData'
+      }
+    })
+
+    // Merge computed ratings and derive additional fields
+    pipeline.push({
+      $addFields: {
+        avgRating: {
+          $round: [
+            {
+              $ifNull: [
+                { $arrayElemAt: ['$ratingData.avgRating', 0] },
+                { $ifNull: ['$avgRating', 0] }
+              ]
+            },
+            1
+          ]
+        },
+        ratingsCount: { $ifNull: [ { $arrayElemAt: ['$ratingData.ratingsCount', 0] }, 0 ] },
+        categoryName: '$categoryData.name',
+        moq: { $ifNull: ['$orderData.moq', null] },
+        deliveryDays: { $ifNull: ['$orderData.standardLeadTime.time', null] },
+        isCustomizable: { $cond: [ { $gt: [ { $size: '$customData' }, 0 ] }, true, false ] },
+        // Precompute images to avoid relying on mediaData after $unset
+        images: {
+          $ifNull: [
+            { $slice: ['$mediaData.images', 3] },
+            []
+          ]
+        },
+        warranty: '$mediaData.warranty'
+      }
+    })
+
+    // Remove temp fields before projecting
+    pipeline.push({ $unset: ['ratingData', 'mediaData', 'categoryData', 'orderData', 'customData'] })
+
+    // Final projection - precomputed images
     pipeline.push({
       $project: {
         // Full service schema fields
@@ -182,20 +255,19 @@ export const getServicesController = async (req, res) => {
         description: 1,
         avgRating: 1,
         ratingsCount: 1,
+        categoryName: 1,
+        moq: 1,
+        deliveryDays: 1,
+        isCustomizable: 1,
+        images: 1,
         isComplete: 1,
         completionPercentage: 1,
         incompleteSteps: 1,
         stepStatus: 1,
         createdAt: 1,
         updatedAt: 1,
-
-        // Few images from ServiceMedia (first 3)
-        images: {
-          $slice: ['$mediaData.images', 3]
-        },
-        
         // Optional: warranty info if available
-        warranty: '$mediaData.warranty'
+        warranty: 1
       }
     });
 
