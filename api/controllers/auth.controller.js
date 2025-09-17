@@ -5,6 +5,8 @@ import jwt from 'jsonwebtoken'
 import otpGenerator from 'otp-generator'
 
 import sendMail from '../helpers/sendMail.js'
+import https from 'https'
+import http from 'http'
 import Roles from '../models/role.schema.js'
 import Seller from '../models/seller.schema.js'
 import Verifications from '../models/verification.schema.js'
@@ -52,6 +54,51 @@ export const signupController = async (req, res) => {
     req.roleId = sellerRole._id
 
     await Seller.create(req)
+
+    // Fire-and-forget: create corresponding buyer account in buyer-db
+    try {
+      const buyerServiceUrl = process.env.BUYER_SERVICE_URL || 'http://localhost:8001'
+      const internalSecret = process.env.INTERNAL_SHARED_SECRET
+      const payload = JSON.stringify({
+        fullName: req.companyName,
+        email: req.email,
+        phoneNumber: req.phone || req.phoneNumber,
+        password: req.password,
+      })
+
+      const url = new URL('/api/v1/internal/buyer/create', buyerServiceUrl)
+      const isHttps = url.protocol === 'https:'
+      const options = {
+        method: 'POST',
+        hostname: url.hostname,
+        port: url.port || (isHttps ? 443 : 80),
+        path: url.pathname + url.search,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload),
+          'x-internal-secret': internalSecret || '',
+        },
+      }
+
+      const client = isHttps ? https : http
+      const reqInternal = client.request(options, (r) => {
+        const chunks = []
+        r.on('data', (c) => chunks.push(c))
+        r.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf8')
+          if (r.statusCode && r.statusCode >= 300) {
+            console.warn('[buyer-sync] create (simple) status:', r.statusCode, 'url:', url.toString(), 'body:', body)
+          }
+        })
+      })
+      reqInternal.on('error', (e) => {
+        console.warn('[buyer-sync] create (simple) request error:', e?.message)
+      })
+      reqInternal.write(payload)
+      reqInternal.end()
+    } catch (_) {
+      // do not block signup on internal failure
+    }
 
     res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED, 
      'Seller Created Successfully',
@@ -727,6 +774,51 @@ try {
       })
 
         await newSeller.save();
+
+        // Fire-and-forget: create corresponding buyer account in buyer-db
+        try {
+          const buyerServiceUrl = process.env.BUYER_SERVICE_URL || 'http://localhost:5001'
+          const internalSecret = process.env.INTERNAL_SHARED_SECRET
+          const payload = JSON.stringify({
+            fullName: verification.companyName,
+            email: verification.email,
+            phoneNumber: verification.phoneNumber,
+            passwordHash: verification.password, // already hashed
+          })
+
+          const url = new URL('/api/v1/internal/buyer/create', buyerServiceUrl)
+          const isHttps = url.protocol === 'https:'
+          const options = {
+            method: 'POST',
+            hostname: url.hostname,
+            port: url.port || (isHttps ? 443 : 80),
+            path: url.pathname + url.search,
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload),
+              'x-internal-secret': internalSecret || '',
+            },
+          }
+
+          const client = isHttps ? https : http
+          const reqInternal = client.request(options, (r) => {
+            const chunks = []
+            r.on('data', (c) => chunks.push(c))
+            r.on('end', () => {
+              const body = Buffer.concat(chunks).toString('utf8')
+              if (r.statusCode && r.statusCode >= 300) {
+                console.warn('[buyer-sync] create (otp) status:', r.statusCode, 'url:', url.toString(), 'body:', body)
+              }
+            })
+          })
+          reqInternal.on('error', (e) => {
+            console.warn('[buyer-sync] create (otp) request error:', e?.message)
+          })
+          reqInternal.write(payload)
+          reqInternal.end()
+        } catch (_) {
+          // swallow
+        }
 
         verification.isPhoneNumberVerified = true;
         verification.currentStep = 'completed';
