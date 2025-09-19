@@ -8,6 +8,9 @@ import jwt from 'jsonwebtoken';
 import Quotation from '../models/quotations.schema.js';
 import Chat from '../models/chat.schema.js';
 import mongoose from 'mongoose';
+import Seller from '../models/seller.schema.js'
+import Buyer from '../models/buyer.schema.js'
+import { getNextSequence, formatInvoiceNumber } from '../helpers/getNextSequence.js'
 import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 import sendNotification from '../helpers/sendNotification.js';
@@ -29,7 +32,7 @@ export const generateInvoice = async (req, res) => {
         // Step 1: Find quotation with minimal population to reduce lock time
         const quotation = await Quotation.findById(quotationId)
             .select('seller buyer status')
-            .populate('seller', 'companyName logo')
+            .populate('seller', 'companyName logo email phone street city state zip companyWebsite businessNumber')
             .session(session);
         
         if (!quotation) {
@@ -75,26 +78,83 @@ export const generateInvoice = async (req, res) => {
             chat = await newChat.save({ session });
         }
 
-        // Step 4: Prepare invoice data
-        const totalAmount = validatedData.negotiatedPrice + 
-                           (validatedData.taxAmount || 0) + 
-                           (validatedData.shippingCharges || 0);
+        // Step 4: Load party info
+        const [sellerDoc, buyerDoc] = await Promise.all([
+            Seller.findById(sellerId).select('companyName logo email phone street city state zip companyWebsite businessNumber').session(session),
+            Buyer.findById(quotation.buyer).select('fullName email phoneNumber city state').session(session)
+        ])
+
+        // Step 5: Compute totals
+        const itemsSubtotal = Array.isArray(validatedData.items) ? validatedData.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0) : 0
+        const subtotal = itemsSubtotal > 0 ? itemsSubtotal : (Number(validatedData.negotiatedPrice) || 0)
+        const taxAmount = Number(validatedData.taxAmount) || 0
+        const shippingCharges = Number(validatedData.shippingCharges) || 0
+        const additionalFees = Number(validatedData.additionalFees) || 0
+        const totalAmount = subtotal + taxAmount + shippingCharges + additionalFees
+
+        // Step 6: Invoice number and dates
+        const seq = await getNextSequence('invoice', session)
+        const invoiceNumber = formatInvoiceNumber(seq)
+        const invoiceDate = new Date()
+        const dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : new Date(invoiceDate)
+        if (!validatedData.dueDate) {
+            dueDate.setDate(dueDate.getDate() + 30) // default Net 30
+        }
         
         const invoiceData = {
             quotationId,
             sellerId,
             buyer: quotation.buyer,
             chatId: chat._id,
-            negotiatedPrice: validatedData.negotiatedPrice,
-            paymentTerms: validatedData.paymentTerms,
-            deliveryTerms: validatedData.deliveryTerms,
-            taxAmount: validatedData.taxAmount || 0,
-            shippingCharges: validatedData.shippingCharges || 0,
-            totalAmount: totalAmount,
+            negotiatedPrice: subtotal,
+            paymentTerms: validatedData.paymentTerms || 'Net 30',
+            deliveryTerms: validatedData.deliveryTerms || null,
+            taxAmount,
+            shippingCharges,
+            additionalFees,
+            totalAmount,
+            currency: validatedData.currency || 'CAD',
+            acceptedPaymentMethods: validatedData.acceptedPaymentMethods || [],
             notes: validatedData.notes,
+            items: Array.isArray(validatedData.items) ? validatedData.items.map(i => ({
+                description: i.description,
+                quantity: Number(i.quantity || 0),
+                unitPrice: Number(i.unitPrice || 0),
+                lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)
+            })) : [],
+            invoiceNumber,
+            invoiceDate,
+            dueDate,
+            poNumber: validatedData.poNumber || null,
+            seller: {
+                id: sellerDoc._id,
+                businessName: sellerDoc.companyName,
+                logo: sellerDoc.logo || null,
+                email: sellerDoc.email,
+                phone: sellerDoc.phone,
+                website: sellerDoc.companyWebsite || null,
+                taxId: sellerDoc.businessNumber || null,
+                address: {
+                    street: sellerDoc.street || '',
+                    city: sellerDoc.city || '',
+                    state: sellerDoc.state || '',
+                    postalCode: sellerDoc.zip || '',
+                    country: 'Canada'
+                }
+            },
+            buyerInfo: {
+                id: buyerDoc._id,
+                name: buyerDoc.fullName,
+                email: buyerDoc.email || null,
+                phone: buyerDoc.phoneNumber || null,
+                address: {
+                    city: buyerDoc.city || '',
+                    state: buyerDoc.state || ''
+                }
+            },
             status: 'pending',
             viewedByBuyer: false,
-            expiresAt: validatedData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+            expiresAt: validatedData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             createdAt: new Date()
         };
 
@@ -297,16 +357,71 @@ export const updateInvoice = async (req, res) => {
             throw buildErrorObject(httpStatus.CONFLICT, 'Cannot update invoice. Chat phase has changed');
         }
 
-        // Recalculate total if needed
-        if (validatedData.negotiatedPrice) {
-            validatedData.totalAmount = validatedData.negotiatedPrice 
-        }
+        // Merge fields: use provided values, otherwise keep existing
+        const currency = validatedData.currency ?? invoice.currency ?? 'CAD';
+        const paymentTerms = validatedData.paymentTerms ?? invoice.paymentTerms ?? null;
+        const deliveryTerms = validatedData.deliveryTerms ?? invoice.deliveryTerms ?? null;
+        const poNumber = validatedData.poNumber ?? invoice.poNumber ?? null;
+        const notes = validatedData.notes ?? invoice.notes ?? null;
+        const acceptedPaymentMethods = Array.isArray(validatedData.acceptedPaymentMethods)
+            ? validatedData.acceptedPaymentMethods
+            : (invoice.acceptedPaymentMethods || []);
+        const dueDate = validatedData.dueDate
+            ? new Date(validatedData.dueDate)
+            : (invoice.dueDate || null);
 
-        const updatedInvoice = await Invoice.findByIdAndUpdate(
-            invoiceId,
-            validatedData,
-            { new: true }
-        ).populate('quotationId');
+        // Items: if provided, normalize and compute line totals; else keep existing
+        const hasIncomingItems = Array.isArray(validatedData.items) && validatedData.items.length > 0;
+        const nextItems = hasIncomingItems
+            ? validatedData.items.map(i => ({
+                description: i.description || '',
+                quantity: Number(i.quantity || 0),
+                unitPrice: Number(i.unitPrice || 0),
+                lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)
+            }))
+            : (invoice.items || []);
+
+        // Subtotal: prefer items subtotal when items present, otherwise negotiated/base price
+        const itemsSubtotal = nextItems.reduce((sum, i) => sum + Number(i.lineTotal || 0), 0);
+        const incomingNegotiatedPrice = validatedData.negotiatedPrice !== undefined
+            ? Number(validatedData.negotiatedPrice)
+            : undefined;
+        const negotiatedPrice = incomingNegotiatedPrice !== undefined
+            ? incomingNegotiatedPrice
+            : Number(invoice.negotiatedPrice || 0);
+
+        const subtotal = itemsSubtotal > 0 ? itemsSubtotal : negotiatedPrice;
+
+        // Charges
+        const taxAmount = validatedData.taxAmount !== undefined
+            ? Number(validatedData.taxAmount)
+            : Number(invoice.taxAmount || 0);
+        const shippingCharges = validatedData.shippingCharges !== undefined
+            ? Number(validatedData.shippingCharges)
+            : Number(invoice.shippingCharges || 0);
+        const additionalFees = validatedData.additionalFees !== undefined
+            ? Number(validatedData.additionalFees)
+            : Number(invoice.additionalFees || 0);
+
+        const totalAmount = subtotal + taxAmount + shippingCharges + additionalFees;
+
+        // Persist merged values back to the document to preserve unchanged data
+        invoice.currency = currency;
+        invoice.paymentTerms = paymentTerms;
+        invoice.deliveryTerms = deliveryTerms;
+        invoice.poNumber = poNumber;
+        invoice.notes = notes;
+        invoice.acceptedPaymentMethods = acceptedPaymentMethods;
+        invoice.dueDate = dueDate;
+        invoice.items = nextItems;
+        invoice.negotiatedPrice = negotiatedPrice;
+        invoice.taxAmount = taxAmount;
+        invoice.shippingCharges = shippingCharges;
+        invoice.additionalFees = additionalFees;
+        invoice.totalAmount = totalAmount;
+
+        const updatedInvoice = await invoice.save();
+        await updatedInvoice.populate('quotationId');
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, {

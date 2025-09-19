@@ -51,12 +51,64 @@ export const generateInvoiceValidator = [
     .isFloat({ min: 0 })
     .withMessage('Shipping charges must be 0 or greater'),
 
+  check('additionalFees')
+    .optional()
+    .isNumeric()
+    .withMessage('Additional fees must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Additional fees must be 0 or greater'),
+
+  check('currency')
+    .optional()
+    .isString()
+    .withMessage('Currency must be a string')
+    .isLength({ min: 3, max: 3 })
+    .withMessage('Currency must be a 3-letter ISO code'),
+
+  check('poNumber')
+    .optional()
+    .isString()
+    .withMessage('PO number must be a string')
+    .isLength({ max: 50 })
+    .withMessage('PO number cannot exceed 50 characters'),
+
+  check('acceptedPaymentMethods')
+    .optional()
+    .isArray()
+    .withMessage('Accepted payment methods must be an array of strings'),
+
   check('notes')
     .optional()
     .isString()
     .withMessage('Notes must be a string')
     .isLength({ max: 1000 })
     .withMessage('Notes cannot exceed 1000 characters'),
+
+  check('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Due date must be a valid ISO date'),
+
+  check('items')
+    .optional()
+    .isArray()
+    .withMessage('Items must be an array'),
+  check('items.*.description')
+    .optional()
+    .isString()
+    .withMessage('Item description must be a string'),
+  check('items.*.quantity')
+    .optional()
+    .isNumeric()
+    .withMessage('Item quantity must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Item quantity must be 0 or greater'),
+  check('items.*.unitPrice')
+    .optional()
+    .isNumeric()
+    .withMessage('Item unit price must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Item unit price must be 0 or greater'),
 
   (req, res, next) => validateRequest(req, res, next)
 ]

@@ -8,6 +8,9 @@ import jwt from 'jsonwebtoken';
 import ServiceQuotation from '../models/service-quotations.schema.js';
 import ServiceChat from '../models/service-chat.schema.js';
 import mongoose from 'mongoose';
+import Seller from '../models/seller.schema.js'
+import Buyer from '../models/buyer.schema.js'
+import { getNextSequence, formatInvoiceNumber } from '../helpers/getNextSequence.js'
 import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 import sendNotification from '../helpers/sendNotification.js';
@@ -27,7 +30,7 @@ export const generateServiceInvoice = async (req, res) => {
         // Step 1: Find quotation with minimal population to reduce lock time
         const quotation = await ServiceQuotation.findById(quotationId)
             .select('seller buyer status')
-            .populate('seller', 'companyName logo')
+            .populate('seller', 'companyName logo email phone street city state zip companyWebsite businessNumber')
             .session(session);
         
         if (!quotation) {
@@ -73,21 +76,83 @@ export const generateServiceInvoice = async (req, res) => {
             chat = await newChat.save({ session });
         }
 
-        // Step 4: Prepare invoice data
-        const totalAmount = validatedData.negotiatedPrice + 
-                           (validatedData.taxAmount || 0) + 
-                           (validatedData.shippingCharges || 0);
+        // Step 4: Load party info
+        const [sellerDoc, buyerDoc] = await Promise.all([
+            Seller.findById(sellerId).select('companyName logo email phone street city state zip companyWebsite businessNumber').session(session),
+            Buyer.findById(quotation.buyer).select('fullName email phoneNumber city state').session(session)
+        ])
+
+        // Step 5: Compute totals
+        const itemsSubtotal = Array.isArray(validatedData.items) ? validatedData.items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unitPrice || 0), 0) : 0
+        const subtotal = itemsSubtotal > 0 ? itemsSubtotal : (Number(validatedData.negotiatedPrice) || 0)
+        const taxAmount = Number(validatedData.taxAmount) || 0
+        const shippingCharges = Number(validatedData.shippingCharges) || 0
+        const additionalFees = Number(validatedData.additionalFees) || 0
+        const totalAmount = subtotal + taxAmount + shippingCharges + additionalFees
+
+        // Step 6: Invoice number and dates
+        const seq = await getNextSequence('service-invoice', session)
+        const invoiceNumber = formatInvoiceNumber(seq, 'SRV')
+        const invoiceDate = new Date()
+        const dueDate = validatedData.dueDate ? new Date(validatedData.dueDate) : new Date(invoiceDate)
+        if (!validatedData.dueDate) {
+            dueDate.setDate(dueDate.getDate() + 30)
+        }
         
         const invoiceData = {
             quotationId,
             sellerId,
             buyer: quotation.buyer,
             chatId: chat._id,
-            negotiatedPrice: validatedData.negotiatedPrice,
-    
+            negotiatedPrice: subtotal,
+            taxAmount,
+            shippingCharges,
+            additionalFees,
+            totalAmount,
+            paymentTerms: validatedData.paymentTerms || 'Net 30',
+            deliveryTerms: validatedData.deliveryTerms || null,
+            currency: validatedData.currency || 'CAD',
+            acceptedPaymentMethods: validatedData.acceptedPaymentMethods || [],
+            notes: validatedData.notes,
+            items: Array.isArray(validatedData.items) ? validatedData.items.map(i => ({
+                description: i.description,
+                quantity: Number(i.quantity || 0),
+                unitPrice: Number(i.unitPrice || 0),
+                lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)
+            })) : [],
+            invoiceNumber,
+            invoiceDate,
+            dueDate,
+            poNumber: validatedData.poNumber || null,
+            seller: {
+                id: sellerDoc._id,
+                businessName: sellerDoc.companyName,
+                logo: sellerDoc.logo || null,
+                email: sellerDoc.email,
+                phone: sellerDoc.phone,
+                website: sellerDoc.companyWebsite || null,
+                taxId: sellerDoc.businessNumber || null,
+                address: {
+                    street: sellerDoc.street || '',
+                    city: sellerDoc.city || '',
+                    state: sellerDoc.state || '',
+                    postalCode: sellerDoc.zip || '',
+                    country: 'Canada'
+                }
+            },
+            buyerInfo: {
+                id: buyerDoc._id,
+                name: buyerDoc.fullName,
+                email: buyerDoc.email || null,
+                phone: buyerDoc.phoneNumber || null,
+                address: {
+                    city: buyerDoc.city || '',
+                    state: buyerDoc.state || ''
+                }
+            },
             status: 'pending',
             viewedByBuyer: false,
-            expiresAt: validatedData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days default
+            expiresAt: validatedData.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             createdAt: new Date()
         };
 
