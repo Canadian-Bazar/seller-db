@@ -264,6 +264,7 @@ export const getServicesController = async (req, res) => {
         completionPercentage: 1,
         incompleteSteps: 1,
         stepStatus: 1,
+        isArchived: 1,
         createdAt: 1,
         updatedAt: 1,
         // Optional: warranty info if available
@@ -359,16 +360,20 @@ export const archiveServiceController = async(req , res)=>{
       );
     } 
 
+    // Toggle archive status
+    if(service[0].isArchived) {
+      service[0].isArchived = false;
+      await service[0].save();
+      return res.status(httpStatus.OK).json(
+        buildResponse(httpStatus.OK, 'Service unarchived successfully')
+      );
+    }
+
     if(parseInt(service[0].completionPercentage) !== 100) {
       return res.status(httpStatus.BAD_REQUEST).json(
           buildErrorObject(httpStatus.BAD_REQUEST, 'Only completed services can be archived')
       );
     } 
-    if(service[0].isArchived) {
-      return res.status(httpStatus.BAD_REQUEST).json(
-          buildErrorObject(httpStatus.BAD_REQUEST, 'Service is already archived')
-      );
-    }
 
     service[0].isArchived = true;
     await service[0].save();  

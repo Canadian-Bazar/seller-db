@@ -13,6 +13,13 @@ router.use(trimRequest.all)
 // Seller routes (auth required)
 router.use(requireAuth)
 
+// Prefill details for invoice (seller)
+router.get(
+  '/prefill',
+  invoiceValidators.getInvoicePrefillValidator,
+  invoiceControllers.getInvoicePrefill
+)
+
 // Generate invoice (seller)
 
 router.post(

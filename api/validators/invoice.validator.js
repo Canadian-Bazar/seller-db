@@ -127,6 +127,23 @@ export const getInvoiceDetailsValidator = [
   (req, res, next) => validateRequest(req, res, next)
 ]
 
+// Prefill validator for invoice creation (product/service)
+export const getInvoicePrefillValidator = [
+  query('type')
+    .optional()
+    .isIn(['product', 'service'])
+    .withMessage('type must be product or service'),
+  query('chatId')
+    .optional()
+    .isMongoId()
+    .withMessage('chatId must be a valid id'),
+  query('quotationId')
+    .optional()
+    .isMongoId()
+    .withMessage('quotationId must be a valid id'),
+  (req, res, next) => validateRequest(req, res, next)
+]
+
 // Accept invoice validator (buyer)
 export const acceptInvoiceValidator = [
   check('invoiceToken')
@@ -248,6 +265,59 @@ export const updateInvoiceValidator = [
     .withMessage('Notes must be a string')
     .isLength({ max: 1000 })
     .withMessage('Notes cannot exceed 1000 characters'),
+
+  // Newly added fields to allow full invoice updates
+  check('additionalFees')
+    .optional()
+    .isNumeric()
+    .withMessage('Additional fees must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Additional fees must be 0 or greater'),
+
+  check('currency')
+    .optional()
+    .isString()
+    .withMessage('Currency must be a string')
+    .isLength({ min: 3, max: 3 })
+    .withMessage('Currency must be a 3-letter ISO code'),
+
+  check('poNumber')
+    .optional()
+    .isString()
+    .withMessage('PO number must be a string')
+    .isLength({ max: 50 })
+    .withMessage('PO number cannot exceed 50 characters'),
+
+  check('acceptedPaymentMethods')
+    .optional()
+    .isArray()
+    .withMessage('Accepted payment methods must be an array of strings'),
+
+  check('dueDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Due date must be a valid ISO date'),
+
+  check('items')
+    .optional()
+    .isArray()
+    .withMessage('Items must be an array'),
+  check('items.*.description')
+    .optional()
+    .isString()
+    .withMessage('Item description must be a string'),
+  check('items.*.quantity')
+    .optional()
+    .isNumeric()
+    .withMessage('Item quantity must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Item quantity must be 0 or greater'),
+  check('items.*.unitPrice')
+    .optional()
+    .isNumeric()
+    .withMessage('Item unit price must be a number')
+    .isFloat({ min: 0 })
+    .withMessage('Item unit price must be 0 or greater'),
 
   (req, res, next) => validateRequest(req, res, next)
 ]

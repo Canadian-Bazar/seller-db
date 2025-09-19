@@ -171,6 +171,7 @@ export const getProductsController = async (req, res) => {
         isComplete:1 ,
         completionPercentage:1 ,
         incompleteSteps: 1 ,
+        isArchived: 1,
         
 
         // From stats
@@ -304,13 +305,16 @@ export const archiveProductController = async(req , res)=>{
       throw buildErrorObject(httpStatus.NOT_FOUND , 'Product not found')
     }
 
-    if(parseInt(product.completionPercentage) !== 100){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Product is not complete and cannot be archived')
+    // Toggle archive status with single endpoint
+    if (product.isArchived) {
+      product.isArchived = false
+      await product.save()
+      res.status(httpStatus.OK).json(buildResponse(httpStatus.OK , 'Product unarchived successfully'))
+      return
     }
 
-
-    if(product.isArchived){
-      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Product is already archived')
+    if(parseInt(product.completionPercentage) !== 100){
+      throw buildErrorObject(httpStatus.BAD_REQUEST , 'Product is not complete and cannot be archived')
     }
 
     product.isArchived = true

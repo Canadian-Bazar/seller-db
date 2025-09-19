@@ -14,6 +14,8 @@ import { getNextSequence, formatInvoiceNumber } from '../helpers/getNextSequence
 import { redisClient } from '../redis/redis.config.js';
 import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 import sendNotification from '../helpers/sendNotification.js';
+import ServiceQuotation from '../models/service-quotations.schema.js'
+import ServiceChat from '../models/service-chat.schema.js'
 
 
 
@@ -531,6 +533,159 @@ export const getInvoiceDetails = async (req, res) => {
         if (err.name === 'TokenExpiredError') {
             return handleError(res, buildErrorObject(httpStatus.UNAUTHORIZED, 'Invoice token has expired'));
         }
+        handleError(res, err);
+    }
+};
+
+// Prefill API to fetch product/service, seller and buyer details for invoice creation
+export const getInvoicePrefill = async (req, res) => {
+    try {
+        const validated = matchedData(req);
+        const { type, chatId, quotationId } = validated;
+        const sellerId = req.user._id;
+
+        if (type === 'service') {
+            // Resolve service quotation
+            let quotation;
+            if (quotationId) {
+                quotation = await ServiceQuotation.findById(quotationId)
+                    .populate({
+                        path: 'serviceId',
+                        select: 'name images category description'
+                    })
+                    .populate({ path: 'buyer', select: 'fullName email phoneNumber city state avatar profilePic' });
+            } else if (chatId) {
+                const chat = await ServiceChat.findOne({ _id: chatId, seller: sellerId }).select('quotation seller buyer');
+                if (!chat) {
+                    throw buildErrorObject(httpStatus.NOT_FOUND, 'Service chat not found');
+                }
+                quotation = await ServiceQuotation.findById(chat.quotation)
+                    .populate({
+                        path: 'serviceId',
+                        select: 'name images category description'
+                    })
+                    .populate({ path: 'buyer', select: 'fullName email phoneNumber city state avatar profilePic' });
+            }
+
+            if (!quotation) {
+                throw buildErrorObject(httpStatus.NOT_FOUND, 'Service quotation not found');
+            }
+
+            if (quotation.seller.toString() !== sellerId.toString()) {
+                throw buildErrorObject(httpStatus.FORBIDDEN, 'Unauthorized to access this service quotation');
+            }
+
+            const sellerDoc = await Seller.findById(sellerId).select('companyName logo email phone street city state zip companyWebsite businessNumber');
+
+            const response = {
+                type: 'service',
+                quotationId: quotation._id,
+                priceRange: { min: quotation.minPrice || 0, max: quotation.maxPrice || 0 },
+                productService: {
+                    name: quotation.serviceId?.name || '',
+                    image: Array.isArray(quotation.serviceId?.images) ? quotation.serviceId.images[0] : null,
+                    category: quotation.serviceId?.category || '',
+                    description: quotation.description || quotation.serviceId?.description || '',
+                    quantity: undefined
+                },
+                sellerInfo: {
+                    businessName: sellerDoc?.companyName || '',
+                    logo: sellerDoc?.logo || null,
+                    email: sellerDoc?.email || '',
+                    phone: sellerDoc?.phone || '',
+                    website: sellerDoc?.companyWebsite || null,
+                    address: {
+                        street: sellerDoc?.street || '',
+                        city: sellerDoc?.city || '',
+                        state: sellerDoc?.state || '',
+                        postalCode: sellerDoc?.zip || '',
+                        country: 'Canada'
+                    },
+                    taxId: sellerDoc?.businessNumber || null
+                },
+                buyerInfo: {
+                    name: quotation.buyer?.fullName || '',
+                    email: quotation.buyer?.email || '',
+                    phone: quotation.buyer?.phoneNumber || '',
+                    city: quotation.buyer?.city || '',
+                    state: quotation.buyer?.state || ''
+                },
+                currency: 'CAD'
+            };
+
+            return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+        }
+
+        // Default: product
+        let quotation;
+        if (quotationId) {
+            quotation = await Quotation.findById(quotationId)
+                .populate({
+                    path: 'productId',
+                    select: 'name images category description'
+                })
+                .populate({ path: 'buyer', select: 'fullName email phoneNumber city state avatar profilePic' });
+        } else if (chatId) {
+            const chat = await Chat.findOne({ _id: chatId, seller: sellerId }).select('quotation seller buyer');
+            if (!chat) {
+                throw buildErrorObject(httpStatus.NOT_FOUND, 'Chat not found');
+            }
+            quotation = await Quotation.findById(chat.quotation)
+                .populate({
+                    path: 'productId',
+                    select: 'name images category description'
+                })
+                .populate({ path: 'buyer', select: 'fullName email phoneNumber city state avatar profilePic' });
+        }
+
+        if (!quotation) {
+            throw buildErrorObject(httpStatus.NOT_FOUND, 'Quotation not found');
+        }
+
+        if (quotation.seller.toString() !== sellerId.toString()) {
+            throw buildErrorObject(httpStatus.FORBIDDEN, 'Unauthorized to access this quotation');
+        }
+
+        const sellerDoc = await Seller.findById(sellerId).select('companyName logo email phone street city state zip companyWebsite businessNumber');
+
+        const response = {
+            type: 'product',
+            quotationId: quotation._id,
+            priceRange: { min: quotation.minPrice || 0, max: quotation.maxPrice || 0 },
+            productService: {
+                name: quotation.productId?.name || '',
+                image: Array.isArray(quotation.productId?.images) ? quotation.productId.images[0] : null,
+                category: quotation.productId?.category || '',
+                description: quotation.description || quotation.productId?.description || '',
+                quantity: quotation.quantity || 1
+            },
+            sellerInfo: {
+                businessName: sellerDoc?.companyName || '',
+                logo: sellerDoc?.logo || null,
+                email: sellerDoc?.email || '',
+                phone: sellerDoc?.phone || '',
+                website: sellerDoc?.companyWebsite || null,
+                address: {
+                    street: sellerDoc?.street || '',
+                    city: sellerDoc?.city || '',
+                    state: sellerDoc?.state || '',
+                    postalCode: sellerDoc?.zip || '',
+                    country: 'Canada'
+                },
+                taxId: sellerDoc?.businessNumber || null
+            },
+            buyerInfo: {
+                name: quotation.buyer?.fullName || '',
+                email: quotation.buyer?.email || '',
+                phone: quotation.buyer?.phoneNumber || '',
+                city: quotation.buyer?.city || '',
+                state: quotation.buyer?.state || ''
+            },
+            currency: 'CAD'
+        };
+
+        return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, response));
+    } catch (err) {
         handleError(res, err);
     }
 };
