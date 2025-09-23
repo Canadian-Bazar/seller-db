@@ -23,6 +23,13 @@ router.get(
     categoryControllers.getAllCategories
 )
 
+router.post(
+    '/sub-category',
+    trimRequest.all,
+    categoryValidators.validateCreateSubCategory,
+    categoryControllers.createSubCategory
+)
+
 
 
 

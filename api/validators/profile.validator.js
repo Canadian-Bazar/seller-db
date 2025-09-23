@@ -10,8 +10,8 @@ export const updateProfileValidator = [
     .withMessage('Company name cannot be empty')
     .isLength({ min: 2, max: 50 })
     .withMessage('Company name must be between 2 and 50 characters')
-    .isAlpha('en-US', { ignore: ' ' })
-    .withMessage('Company name can only contain letters and spaces'),
+    .matches(/^[a-zA-Z0-9\s.,&()-]+$/)
+    .withMessage('Company name can only contain letters, numbers, spaces, and common business characters (.,&()-)'),
 
   check('logo')
     .optional()
