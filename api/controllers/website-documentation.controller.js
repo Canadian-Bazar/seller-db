@@ -103,7 +103,7 @@ export const getWebsiteDocumentationController = async (req, res) => {
       const { documentationId } = decoded;
 
 
-      console.log("id" ,documentationId)
+      console.log("id total" ,documentationId)
 
       const websiteDocumentation = await WebsiteDocumentation.findById(documentationId)
         .populate({
@@ -119,8 +119,23 @@ export const getWebsiteDocumentationController = async (req, res) => {
         throw buildErrorObject(httpStatus.NOT_FOUND, 'Website documentation not found');
       }
 
+      // Ensure numeric pricing and correct total in the response
+      const docObject = websiteDocumentation.toObject();
+      if (Array.isArray(docObject.pricingPlans)) {
+        docObject.pricingPlans = docObject.pricingPlans.map((plan) => {
+          const site = Number(plan.sitePrice || 0);
+          const sub = Number(plan.subscriptionPrice || 0);
+          return {
+            ...plan,
+            sitePrice: site,
+            subscriptionPrice: sub,
+            totalPrice: site + sub
+          };
+        });
+      }
+
       return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK,
-        websiteDocumentation
+        docObject
       ));
 
     } catch (tokenError) {

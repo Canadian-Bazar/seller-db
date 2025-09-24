@@ -181,7 +181,7 @@ export const validateCreateWebsiteDocumentation = [
             for (let i = 0; i < pricingPlans.length; i++) {
                 const plan = pricingPlans[i];
                 if (plan.totalPrice !== undefined) {
-                    const calculatedTotal = (plan.sitePrice || 0) + (plan.subscriptionPrice || 0);
+                    const calculatedTotal = Number(plan.sitePrice || 0) + Number(plan.subscriptionPrice || 0);
                     if (plan.totalPrice < calculatedTotal) {
 
                         // throw buildErrorObject(htt)
