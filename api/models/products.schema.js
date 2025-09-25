@@ -13,7 +13,23 @@ const ProductSchema = new mongoose.Schema({
     slug: {
       type: String,
       unique: true,
-      index: true
+      index: true,
+      trim: true,
+      lowercase: true
+    },
+    description: {
+      type: String,
+      trim: true
+    },
+    shortDescription: {
+      type: String,
+      trim: true,
+      maxlength: 200
+    },
+    images: [String],
+    videos:[String] ,
+    thumbnail: {
+      type: String
     },
     avgRating: {
       type: Number, 
@@ -26,24 +42,18 @@ const ProductSchema = new mongoose.Schema({
       default: 0,
       min: 0
     },
-    isVerified: {
-      type: Boolean,
-      default: false,
-      required: true
+    rating: {
+      average: { type: Number, default: 0, min: 0, max: 5 },
+      count: { type: Number, default: 0, min: 0 }
     },
-    seller: {
-      type: mongoose.Types.ObjectId,
-      ref: 'Seller',
-      required: true,
-      index: true
-    },
-    images: [String],
-    videos:[String] ,
-    
+    reviews: [{
+      user: { type: mongoose.Types.ObjectId, ref: 'User' },
+      rating: { type: Number, min: 1, max: 5 },
+      comment: { type: String, trim: true },
+      createdAt: { type: Date, default: Date.now }
+    }],
     about: [String],
-    
     services: [String], 
-    
     descriptionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'ProductDescription'
@@ -57,6 +67,20 @@ const ProductSchema = new mongoose.Schema({
     maxPrice:{
       type:Number ,
     } ,
+    price: {
+      type: Number,
+      min: 0
+    },
+    originalPrice: {
+      type: Number,
+      min: 0
+    },
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+    },
     moq:{
       type:Number ,
       default:null
@@ -66,80 +90,94 @@ const ProductSchema = new mongoose.Schema({
       ref:'Category',
       required:true
     } ,
+    category: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Category'
+    },
+    categoryName: {
+      type: String,
+      trim: true
+    },
+    subcategory: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Category'
+    },
+    subcategoryName: {
+      type: String,
+      trim: true
+    },
     isVerified:{
       type:Boolean ,
       default:false ,
       required:true
-  } ,
-  deliveryDays:{
-    type:Number ,
-    required:true,
-    default:1
-  } ,
-  isCustomizable:{
-    type:Boolean ,
-    default:false,
-    required:true
-  } ,
-
-
+    } ,
+    deliveryDays:{
+      type:Number ,
+      required:true,
+      default:1
+    } ,
+    isCustomizable:{
+      type:Boolean ,
+      default:false,
+      required:true
+    } ,
     isComplete: { 
-        type: Boolean, 
-        default: false,
-        index: true
+      type: Boolean, 
+      default: false,
+      index: true
     },
-    
     completionPercentage: {
-        type: Number,
-        default: 0,
-        min: 0,
-        max: 100
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
     },
-    
     incompleteSteps: [{
-        type: String,
-        enum: ['productInfo', 'attributes', 'images', 'pricing', 'services']
+      type: String,
+      enum: ['productInfo', 'attributes', 'images', 'pricing', 'services']
     }],
-    
     stepStatus: {
-        productInfo: { type: Boolean, default: false },   
-        attributes: { type: Boolean, default: false },     
-        images: { type: Boolean, default: false },         
-        pricing: { type: Boolean, default: false },         
-        services: { type: Boolean, default: false },    
+      productInfo: { type: Boolean, default: false },   
+      attributes: { type: Boolean, default: false },     
+      images: { type: Boolean, default: false },         
+      pricing: { type: Boolean, default: false },         
+      services: { type: Boolean, default: false },    
     },
-
-
     brochure:{
       type:String ,
       default:null
     } ,
-
-
-
     isBlocked:{
       type:Boolean ,
       default:false ,
       required:true
     } ,
-
     isArchived:{
       type:Boolean ,
       default:false ,
       required:true
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true
+    },
+    seller: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Seller',
+      required: true,
+      index: true
     }
-
-    
-
-
-
-  
-
 }, { timestamps: true , collection:"Product" } );
 
+// Indexes (superset)
 ProductSchema.index({ name: 'text' });
+ProductSchema.index({ description: 'text' });
 ProductSchema.index({ isVerified: 1 });
 ProductSchema.index({ avgRating: -1 });
+ProductSchema.index({ price: 1 });
+ProductSchema.index({ rating: -1 });
+ProductSchema.index({ createdAt: -1 });
 
 ProductSchema.plugin(paginate)
 ProductSchema.plugin(aggregatePaginate)
