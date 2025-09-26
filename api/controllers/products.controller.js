@@ -172,6 +172,7 @@ export const getProductsController = async (req, res) => {
         completionPercentage:1 ,
         incompleteSteps: 1 ,
         isArchived: 1,
+        isActive: 1,
         
 
         // From stats

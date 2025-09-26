@@ -265,6 +265,8 @@ export const getServicesController = async (req, res) => {
         incompleteSteps: 1,
         stepStatus: 1,
         isArchived: 1,
+            // include admin activation flag
+            isActive: 1,
         createdAt: 1,
         updatedAt: 1,
         // Optional: warranty info if available

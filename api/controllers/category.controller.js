@@ -75,6 +75,11 @@ export const getSubCategories = async (req, res) => {
       filter.ancestors = parentCategoryId;
     }
 
+    // Apply search filter by name if provided
+    if (validatedData.search) {
+      filter.name = { $regex: validatedData.search, $options: 'i' };
+    }
+
     const [totalDocs, categories] = await Promise.all([
       Category.countDocuments(filter),
       Category.find(filter).sort({ name: 1 }).limit(limit).skip(skip)
