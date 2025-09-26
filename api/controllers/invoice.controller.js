@@ -452,6 +452,11 @@ export const deleteInvoice = async (req, res) => {
             throw buildErrorObject(httpStatus.CONFLICT, 'Cannot delete processed invoice');
         }
 
+        // Fetch chat to capture current active invoice link for cleanup
+        const chatDoc = await Chat.findById(invoice.chatId).select('activeInvoice seller buyer');
+
+        const invoiceLinkToken = chatDoc?.activeInvoice?.link || null;
+
         // Reset chat phase back to negotiation
         await Chat.findByIdAndUpdate(invoice.chatId, {
             phase: 'negotiation',
@@ -459,6 +464,50 @@ export const deleteInvoice = async (req, res) => {
         });
 
         await Invoice.findByIdAndDelete(invoiceId);
+
+        // Try to remove the previously-sent invoice link message from Redis queue
+        try {
+            const queueKey = `MESSAGEQUEUE:${invoice.chatId}`;
+            const allMessages = await redisClient.lrange(queueKey, 0, -1);
+            if (Array.isArray(allMessages) && allMessages.length > 0 && invoiceLinkToken) {
+                for (const raw of allMessages) {
+                    try {
+                        const msg = JSON.parse(raw);
+                        const msgToken = Array.isArray(msg?.media) ? msg.media?.[0]?.url : null;
+                        if (msg?.messageType === 'link' && msgToken && msgToken === invoiceLinkToken) {
+                            // Remove all occurrences matching this serialized payload
+                            await redisClient.lrem(queueKey, 0, raw);
+                        }
+                    } catch (parseErr) {
+                        // Ignore malformed messages
+                    }
+                }
+            }
+        } catch (redisCleanupError) {
+            console.error('Redis cleanup error (non-blocking):', redisCleanupError);
+        }
+
+        // Push a system message to notify participants that invoice was withdrawn
+        try {
+            const systemMessage = {
+                senderId: sellerId,
+                senderModel: 'Seller',
+                content: 'Invoice has been withdrawn by the seller. A new invoice can be generated with updated terms.',
+                chat: invoice.chatId,
+                messageType: 'text',
+                isRead: false,
+                createdAt: new Date(),
+                businessContext: {
+                    isSystemMessage: true,
+                    isBusinessAction: true,
+                    actionType: 'invoice_deleted',
+                    actionData: { invoiceId: String(invoiceId) }
+                }
+            };
+            await storeMessageInRedis(invoice.chatId, systemMessage);
+        } catch (redisSystemMsgError) {
+            console.error('Redis system message error (non-blocking):', redisSystemMsgError);
+        }
 
         res.status(httpStatus.OK).json(
             buildResponse(httpStatus.OK, { message: 'Invoice deleted successfully' })
