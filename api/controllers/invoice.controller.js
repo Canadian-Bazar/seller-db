@@ -33,7 +33,7 @@ export const generateInvoice = async (req, res) => {
 
         // Step 1: Find quotation with minimal population to reduce lock time
         const quotation = await Quotation.findById(quotationId)
-            .select('seller buyer status')
+            .select('seller buyer status productId')
             .populate('seller', 'companyName logo email phone street city state zip companyWebsite businessNumber')
             .session(session);
         
@@ -108,6 +108,7 @@ export const generateInvoice = async (req, res) => {
             sellerId,
             buyer: quotation.buyer,
             chatId: chat._id,
+            productId: quotation.productId || null,
             negotiatedPrice: subtotal,
             paymentTerms: validatedData.paymentTerms || 'Net 30',
             deliveryTerms: validatedData.deliveryTerms || null,
@@ -120,6 +121,8 @@ export const generateInvoice = async (req, res) => {
             notes: validatedData.notes,
             items: Array.isArray(validatedData.items) ? validatedData.items.map(i => ({
                 description: i.description,
+                productId: i.productId || quotation.productId || null,
+                productName: i.productName || '',
                 quantity: Number(i.quantity || 0),
                 unitPrice: Number(i.unitPrice || 0),
                 lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)
@@ -293,7 +296,7 @@ export const getSellerInvoices = async (req, res) => {
         const invoices = await Invoice.find(filter)
             .populate('quotationId')
             .populate('chatId')
-            .populate('buyerId', 'fullName email')
+            .populate('buyer', 'fullName email')
             .sort({ createdAt: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
@@ -322,7 +325,7 @@ export const getInvoiceById = async (req, res) => {
         const invoice = await Invoice.findOne({ _id: invoiceId, sellerId })
             .populate('quotationId')
             .populate('chatId')
-            .populate('buyerId', 'fullName email');
+            .populate('buyer', 'fullName email');
 
         if (!invoice) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Invoice not found');
@@ -377,6 +380,8 @@ export const updateInvoice = async (req, res) => {
         const nextItems = hasIncomingItems
             ? validatedData.items.map(i => ({
                 description: i.description || '',
+                productId: i.productId || (invoice.items?.[0]?.productId ?? null),
+                productName: i.productName || (invoice.items?.[0]?.productName ?? ''),
                 quantity: Number(i.quantity || 0),
                 unitPrice: Number(i.unitPrice || 0),
                 lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)

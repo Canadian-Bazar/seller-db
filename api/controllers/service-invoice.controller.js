@@ -29,7 +29,7 @@ export const generateServiceInvoice = async (req, res) => {
 
         // Step 1: Find quotation with minimal population to reduce lock time
         const quotation = await ServiceQuotation.findById(quotationId)
-            .select('seller buyer status')
+            .select('seller buyer status serviceId')
             .populate('seller', 'companyName logo email phone street city state zip companyWebsite businessNumber')
             .session(session);
         
@@ -101,6 +101,7 @@ export const generateServiceInvoice = async (req, res) => {
         
         const invoiceData = {
             quotationId,
+            serviceId: quotation.serviceId || null,
             sellerId,
             buyer: quotation.buyer,
             chatId: chat._id,
@@ -116,6 +117,8 @@ export const generateServiceInvoice = async (req, res) => {
             notes: validatedData.notes,
             items: Array.isArray(validatedData.items) ? validatedData.items.map(i => ({
                 description: i.description,
+                serviceId: i.serviceId || quotation.serviceId || null,
+                serviceName: i.serviceName || '',
                 quantity: Number(i.quantity || 0),
                 unitPrice: Number(i.unitPrice || 0),
                 lineTotal: Number(i.quantity || 0) * Number(i.unitPrice || 0)
@@ -334,7 +337,8 @@ export const getServiceInvoiceDetails = async (req, res) => {
                     }
                 ]
             })
-            .populate('sellerId', 'companyName email logo phone city state');
+            .populate('sellerId', 'companyName email logo phone city state')
+            .populate('serviceId');
 
         if (!invoiceDetails) {
             throw buildErrorObject(httpStatus.NOT_FOUND, 'Service invoice not found');

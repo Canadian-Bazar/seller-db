@@ -1,67 +1,78 @@
 import mongoose from 'mongoose';
 
-const LineItemSchema = new mongoose.Schema({
+const LineItemSchema = new mongoose.Schema(
+  {
     description: { type: String, required: false, default: '' },
+    productId: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Product',
+      required: false,
+      default: null,    
+    },
+    productName: { type: String, required: false, default: '' },
     quantity: { type: Number, required: true, min: 0, default: 1 },
     unitPrice: { type: Number, required: true, min: 0, default: 0 },
     lineTotal: { type: Number, required: true, min: 0, default: 0 },
-}, { _id: false });
+  },
+  { _id: false },
+);
 
-const InvoiceSchema = new mongoose.Schema({
+const InvoiceSchema = new mongoose.Schema(
+  {
     quotationId: {
-        type: mongoose.Types.ObjectId,
-        ref: 'Quotation',
-        required: true
+      type: mongoose.Types.ObjectId,
+      ref: 'Quotation',
+      required: true,
     },
 
     chatId: {
-        type: mongoose.Types.ObjectId,
-        ref: 'Chat',
+      type: mongoose.Types.ObjectId,
+      ref: 'Chat',
     },
 
     sellerId: {
-        type: mongoose.Types.ObjectId,
-        ref: 'Seller',
-        required: true
+      type: mongoose.Types.ObjectId,
+      ref: 'Seller',
+      required: true,
     },
 
     buyer: {
-        type: mongoose.Types.ObjectId,
-        ref: 'Buyer',
-        required: true
+      type: mongoose.Types.ObjectId,
+      ref: 'Buyer',
+      required: true,
     },
 
     // Display block for PDFs/UI, auto-filled from Seller/Buyer at creation
     seller: {
-        id: {
-            type: mongoose.Types.ObjectId,
-            ref: 'Seller',
-            required: true
-        },
-        businessName: { type: String, required: true },
-        logo: { type: String, default: null },
-        email: { type: String, required: true },
-        phone: { type: String, required: true },
-        website: { type: String, default: null },
-        taxId: { type: String, default: null },
-        address: {
-            street: { type: String, default: '' },
-            city: { type: String, default: '' },
-            state: { type: String, default: '' },
-            postalCode: { type: String, default: '' },
-            country: { type: String, default: '' }
-        }
+      id: {
+        type: mongoose.Types.ObjectId,
+        ref: 'Seller',
+        required: true,
+      },
+      businessName: { type: String, required: true },
+      logo: { type: String, default: null },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
+      website: { type: String, default: null },
+      taxId: { type: String, default: null },
+      address: {
+        street: { type: String, default: '' },
+        city: { type: String, default: '' },
+        state: { type: String, default: '' },
+        postalCode: { type: String, default: '' },
+        country: { type: String, default: '' },
+      },
     },
 
     buyerInfo: {
-        id: { type: mongoose.Types.ObjectId, ref: 'Buyer', required: true },
-        name: { type: String, required: true },
-        email: { type: String, default: null },
-        phone: { type: String, default: null },
-        address: {
-            city: { type: String, default: '' },
-            state: { type: String, default: '' }
-        }
+      id: { type: mongoose.Types.ObjectId, ref: 'Buyer', required: true },
+      name: { type: String, required: true },
+      email: { type: String, default: null },
+      phone: { type: String, default: null },
+      address: {
+        city: { type: String, default: '' },
+        state: { type: String, default: '' },
+      },
     },
 
     // Commercial fields
@@ -73,10 +84,11 @@ const InvoiceSchema = new mongoose.Schema({
 
     items: { type: [LineItemSchema], default: [] },
 
-    negotiatedPrice: { // base price or subtotal in simple case
-        type: Number,
-        required: true,
-        min: 0
+    negotiatedPrice: {
+      // base price or subtotal in simple case
+      type: Number,
+      required: true,
+      min: 0,
     },
     taxAmount: { type: Number, default: 0, min: 0 },
     shippingCharges: { type: Number, default: 0, min: 0 },
@@ -89,9 +101,9 @@ const InvoiceSchema = new mongoose.Schema({
     notes: { type: String, default: null },
 
     status: {
-        type: String,
-        enum: ['pending', 'accepted', 'rejected'],
-        default: 'pending'
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'pending',
     },
     acceptedAt: { type: Date, default: null },
     rejectedAt: { type: Date, default: null },
@@ -101,13 +113,15 @@ const InvoiceSchema = new mongoose.Schema({
     viewedAt: { type: Date, default: null },
 
     expiresAt: {
-        type: Date,
-        default: () => new Date(Date.now() + 24 * 60 * 60 * 1000)
-    }
-}, {
+      type: Date,
+      default: () => new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  },
+  {
     timestamps: true,
-    collection: 'Invoice'
-});
+    collection: 'Invoice',
+  },
+);
 
 InvoiceSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 InvoiceSchema.index({ quotationId: 1 });
