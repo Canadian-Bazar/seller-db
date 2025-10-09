@@ -42,6 +42,7 @@ import serviceAnalyticsRoutes from './service-analytics.routes.js'
 import servicePerformanceRoutes from './service-performance.routes.js'
 import locationRoutes from './location.routes.js'
 import seoRoutes from './seo.routes.js'
+import notificationRoutes from './notifications.routes.js'
 
 
 
@@ -93,6 +94,7 @@ v1Routes.use('/service-analytics', serviceAnalyticsRoutes)
 v1Routes.use('/service-performance', servicePerformanceRoutes)
 v1Routes.use('/location', locationRoutes)
 v1Routes.use('/seo', seoRoutes)
+v1Routes.use('/notifications', notificationRoutes)
 
 
 
