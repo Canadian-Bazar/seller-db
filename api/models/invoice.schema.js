@@ -102,7 +102,7 @@ const InvoiceSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'rejected'],
+      enum: ['pending', 'accepted', 'rejected', 'expired'],
       default: 'pending',
     },
     acceptedAt: { type: Date, default: null },

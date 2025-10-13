@@ -24,6 +24,31 @@ const ServiceSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+  shortDescription: {
+      type: String,
+      trim: true,
+      maxlength: 200
+  },
+  images: [{
+      type: String
+  }],
+  thumbnail: {
+      type: String
+  },
+  price: {
+      type: Number,
+      min: 0
+  },
+  originalPrice: {
+      type: Number,
+      min: 0
+  },
+  discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0
+  },
     avgRating: {
         type: Number, 
         default: 0.0,
@@ -35,6 +60,16 @@ const ServiceSchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
+  rating: {
+      average: { type: Number, default: 0, min: 0, max: 5 },
+      count: { type: Number, default: 0, min: 0 }
+  },
+  reviews: [{
+      user: { type: mongoose.Types.ObjectId, ref: 'User' },
+      rating: { type: Number, min: 1, max: 5 },
+      comment: { type: String },
+      createdAt: { type: Date, default: Date.now }
+  }],
 
     isComplete: { 
         type: Boolean, 
@@ -69,8 +104,75 @@ const ServiceSchema = new mongoose.Schema({
         required:true
     } ,
 
+  categoryName: {
+      type: String,
+      trim: true
+  },
+  subcategory: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Category'
+  },
+  subcategoryName: {
+      type: String,
+      trim: true
+  },
+  duration: {
+      value: { type: Number, min: 1 },
+      unit: { type: String, enum: ['minutes', 'hours', 'days', 'weeks', 'months'] }
+  },
+  serviceType: {
+      type: String,
+      enum: ['one-time', 'recurring', 'subscription'],
+      default: 'one-time'
+  },
+  recurringInterval: {
+      type: String,
+      enum: ['daily', 'weekly', 'monthly', 'yearly']
+  },
+  isAvailable: {
+      type: Boolean,
+      default: true
+  },
+  maxBookings: {
+      type: Number,
+      min: 1
+  },
+  currentBookings: {
+      type: Number,
+      default: 0,
+      min: 0
+  },
+  tags: [{ type: String }],
+  requirements: [{ type: String }],
+  deliverables: [{ type: String }],
+  features: [{ type: String }],
 
-
+  isActive: {
+      type: Boolean,
+      default: true
+  },
+  isFeatured: {
+      type: Boolean,
+      default: false
+  },
+  isVerified: {
+      type: Boolean,
+      default: false
+  },
+  seoTitle: { type: String },
+  seoDescription: { type: String },
+  seoKeywords: [{ type: String }],
+  city: { type: String },
+  status: { type: String, enum: ['draft', 'published', 'archived'], default: 'draft' },
+  availability: {
+      monday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      tuesday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      wednesday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      thursday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      friday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      saturday: { start: String, end: String, isAvailable: { type: Boolean, default: true } },
+      sunday: { start: String, end: String, isAvailable: { type: Boolean, default: true } }
+  },
     isBlocked:{
         type: Boolean,
         default: false,
@@ -91,6 +193,10 @@ ServiceSchema.index({ name: 'text' });
 ServiceSchema.index({ isVerified: 1 });
 ServiceSchema.index({ avgRating: -1 });
 ServiceSchema.index({ serviceType: 1 });
+ServiceSchema.index({ category: 1, isActive: 1 });
+ServiceSchema.index({ price: 1 });
+ServiceSchema.index({ rating: -1 });
+ServiceSchema.index({ createdAt: -1 });
 
 
 

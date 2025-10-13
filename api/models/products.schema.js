@@ -26,10 +26,33 @@ const ProductSchema = new mongoose.Schema({
       trim: true,
       maxlength: 200
     },
+    sku: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
     images: [String],
     videos:[String] ,
     thumbnail: {
       type: String
+    },
+    stock: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    isInStock: {
+      type: Boolean,
+      default: true
+    },
+    weight: {
+      type: Number,
+      min: 0
+    },
+    dimensions: {
+      length: { type: Number, min: 0 },
+      width: { type: Number, min: 0 },
+      height: { type: Number, min: 0 }
     },
     avgRating: {
       type: Number, 
@@ -51,6 +74,18 @@ const ProductSchema = new mongoose.Schema({
       rating: { type: Number, min: 1, max: 5 },
       comment: { type: String, trim: true },
       createdAt: { type: Date, default: Date.now }
+    }],
+    tags: [{
+      type: String,
+      trim: true
+    }],
+    specifications: [{
+      name: { type: String, required: true },
+      value: { type: String, required: true }
+    }],
+    features: [{
+      type: String,
+      trim: true
     }],
     about: [String],
     services: [String], 
@@ -147,6 +182,27 @@ const ProductSchema = new mongoose.Schema({
       type:String ,
       default:null
     } ,
+    seoTitle: {
+      type: String,
+      trim: true
+    },
+    seoDescription: {
+      type: String,
+      trim: true
+    },
+    seoKeywords: [{
+      type: String,
+      trim: true
+    }],
+    city: {
+      type: String,
+      trim: true
+    },
+    status: {
+      type: String,
+      enum: ['draft', 'published', 'archived'],
+      default: 'draft'
+    },
     isBlocked:{
       type:Boolean ,
       default:false ,
@@ -162,6 +218,10 @@ const ProductSchema = new mongoose.Schema({
       default: true,
       index: true
     },
+    isFeatured: {
+      type: Boolean,
+      default: false
+    },
     seller: {
       type: mongoose.Types.ObjectId,
       ref: 'Seller',
@@ -170,14 +230,14 @@ const ProductSchema = new mongoose.Schema({
     }
 }, { timestamps: true , collection:"Product" } );
 
-// Indexes (superset)
-ProductSchema.index({ name: 'text' });
-ProductSchema.index({ description: 'text' });
-ProductSchema.index({ isVerified: 1 });
-ProductSchema.index({ avgRating: -1 });
-ProductSchema.index({ price: 1 });
-ProductSchema.index({ rating: -1 });
-ProductSchema.index({ createdAt: -1 });
+// Indexes (superset to support all use-cases)
+ProductSchema.index({ name: 'text', description: 'text', tags: 'text' })
+ProductSchema.index({ isVerified: 1 })
+ProductSchema.index({ avgRating: -1 })
+ProductSchema.index({ category: 1, isActive: 1 })
+ProductSchema.index({ price: 1 })
+ProductSchema.index({ rating: -1 })
+ProductSchema.index({ createdAt: -1 })
 
 ProductSchema.plugin(paginate)
 ProductSchema.plugin(aggregatePaginate)

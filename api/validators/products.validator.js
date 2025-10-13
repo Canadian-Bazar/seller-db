@@ -100,3 +100,19 @@ export const validateArchiveProduct =[
   .withMessage('Product ID is required') ,
   (req , res , next)=>validateRequest(req , res , next)
 ]
+
+
+export const validateToggleProductStatus = [
+  param('productId')
+    .exists({ checkFalsy: true })
+    .isMongoId()
+    .withMessage('Product ID is required')
+    .notEmpty()
+    .withMessage('Product ID is required'),
+  check('isActive')
+    .exists({ checkFalsy: true })
+    .withMessage('isActive is required')
+    .isBoolean()
+    .withMessage('isActive must be a boolean'),
+  (req, res, next) => validateRequest(req, res, next)
+]

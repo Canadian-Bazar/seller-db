@@ -37,6 +37,12 @@ router.put(
     productsControllers.archiveProductController
 )
 
+router.patch(
+  '/:productId/status',
+  productValidators.validateToggleProductStatus,
+  productsControllers.toggleProductStatusController,
+)
+
 
 
 

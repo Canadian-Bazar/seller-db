@@ -327,3 +327,29 @@ export const archiveProductController = async(req , res)=>{
   }
 }
 
+export const toggleProductStatusController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req)
+    const { productId, isActive } = validatedData
+
+    const product = await Products.findOne({ _id: productId, seller: req.user._id })
+    if (!product) {
+      throw buildErrorObject(httpStatus.NOT_FOUND, 'Product not found')
+    }
+
+    product.isActive = Boolean(isActive)
+    await product.save()
+
+    return res
+      .status(httpStatus.OK)
+      .json(
+        buildResponse(httpStatus.OK, {
+          message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
+          product: { _id: product._id, isActive: product.isActive },
+        }),
+      )
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+

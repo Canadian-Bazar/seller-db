@@ -89,6 +89,17 @@ const SellerSchema = new mongoose.Schema({
           required:true
      } ,
 
+     isBlocked: {
+          type: Boolean,
+          default: false,
+          required: true
+     },
+     blockReason: {
+          type: String,
+          required: false,
+          trim: true
+     },
+
      stripeCustomerId:{
           type:String
      } ,
@@ -114,6 +125,12 @@ const SellerSchema = new mongoose.Schema({
           platform: String ,
           url: String
      }] ,
+
+     businessType: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'BusinessType',
+          required: false,
+     },
 
 
      languagesSupported:[

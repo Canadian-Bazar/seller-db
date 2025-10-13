@@ -34,6 +34,9 @@ const VerificationSchema = new mongoose.Schema({
         type:String ,
         trim:true
     } ,
+    // compatibility fields used in admin version
+    otp: { type: Number },
+    validTill: { type: Date },
 } , {collection:'Verifications' , timestamps:true , expireAfterSeconds:3600})
 
 
