@@ -390,4 +390,32 @@ export const archiveServiceController = async(req , res)=>{
 }
 
 
+export const toggleServiceStatusController = async (req, res) => {
+  try {
+    const validatedData = matchedData(req)
+    const userId = req.user._id
+    const { serviceId, isActive } = validatedData
+
+    const service = await Services.findOne({ _id: serviceId, seller: userId })
+    if (!service) {
+      return res.status(httpStatus.NOT_FOUND).json(
+        buildErrorObject(httpStatus.NOT_FOUND, 'Service not found')
+      )
+    }
+
+    service.isActive = Boolean(isActive)
+    await service.save()
+
+    return res.status(httpStatus.OK).json(
+      buildResponse(httpStatus.OK, {
+        message: `Service ${service.isActive ? 'activated' : 'deactivated'} successfully`,
+        service: { _id: service._id, isActive: service.isActive },
+      })
+    )
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+
 

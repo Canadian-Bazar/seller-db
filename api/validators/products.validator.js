@@ -110,7 +110,7 @@ export const validateToggleProductStatus = [
     .notEmpty()
     .withMessage('Product ID is required'),
   check('isActive')
-    .exists({ checkFalsy: true })
+    .exists()
     .withMessage('isActive is required')
     .isBoolean()
     .withMessage('isActive must be a boolean'),

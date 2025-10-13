@@ -51,6 +51,12 @@ router.patch(
     serviceInfoControllers.archiveServiceController
 )
 
+router.patch(
+    '/:serviceId/status',
+    serviceInfoValidators.validateToggleServiceStatus,
+    serviceInfoControllers.toggleServiceStatusController
+)
+
 
 
 

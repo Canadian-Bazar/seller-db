@@ -139,3 +139,20 @@ export const validateArchiveService = [
 
     (req, res, next) => validateRequest(req, res, next)
 ];
+
+
+export const validateToggleServiceStatus = [
+    param('serviceId')
+        .exists()
+        .withMessage('Service ID is required')
+        .isMongoId()
+        .withMessage('Service ID must be a valid MongoDB ObjectId'),
+
+    check('isActive')
+        .exists()
+        .withMessage('isActive is required')
+        .isBoolean()
+        .withMessage('isActive must be a boolean'),
+
+    (req, res, next) => validateRequest(req, res, next)
+];
