@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken'
 import WebsiteTemplate from '../models/website-templates.schema.js'
 import WebsiteDocumentation from '../models/website-documentation.schema.js'
 import WebsiteProject from '../models/website-project.schema.js'
+import WebsiteProjectChat from '../models/website-project-chat.schema.js'
 import mongoose from 'mongoose'
 
 
@@ -139,8 +140,28 @@ export const createWebsiteQuotationController = async (req, res) => {
     const websiteQuotation = new WebsiteQuotation(websiteQuotationData);
     await websiteQuotation.save();
 
+    // ➕ CREATE WebsiteProject immediately (without documentation)
+    const websiteProject = new WebsiteProject({
+      seller: userId,
+      websiteQuotation: websiteQuotation._id,
+      projectStatus: 'quotation_submitted',
+      paymentStatus: 'pending'
+    });
+    await websiteProject.save();
+
+    // ➕ CREATE WebsiteProjectChat immediately using schema
+    const websiteProjectChat = new WebsiteProjectChat({
+      seller: userId,
+      websiteProjectId: websiteProject._id,
+      status: 'active'
+    });
+    await websiteProjectChat.save();
+
     return res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED,
-      'Website quotation created successfully', websiteQuotation
+      'Website quotation created successfully', {
+        quotation: websiteQuotation,
+        project: websiteProject
+      }
     ));
 
   } catch (err) {

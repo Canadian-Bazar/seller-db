@@ -5,7 +5,7 @@ import httpStatus from "http-status";
 import WebsiteDocumentation from '../models/website-documentation.schema.js'
 import WebsiteQuotation from '../models/website-quotation.schema.js'
 import { matchedData } from "express-validator";
-import jwt from 'jsonwebtoken'
+import jwt, { decode } from 'jsonwebtoken'
 import SellerSubscription from '../models/seller-subscription.schema.js'
 import mongoose from "mongoose";
 import Seller from '../models/seller.schema.js'
@@ -100,7 +100,9 @@ export const getWebsiteDocumentationController = async (req, res) => {
 
     try {
       const decoded = jwt.verify(token, process.env.DOCUMENTATION_SECRET);
-      const { documentationId } = decoded;
+
+      console.log("decoded" , decoded)
+      const { websiteDocumentationId:documentationId } = decoded;
 
 
       console.log("id total" ,documentationId)

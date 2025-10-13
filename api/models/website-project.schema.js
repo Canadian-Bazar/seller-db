@@ -18,7 +18,7 @@ const WebsiteProjectSchema = new mongoose.Schema({
   websiteDocumentation: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'WebsiteDocumentation',
-    required: true,
+    required: false,
     index: true
   },
   
@@ -35,8 +35,8 @@ const WebsiteProjectSchema = new mongoose.Schema({
   
   projectStatus: {
     type: String,
-    enum: ['initiated', 'documentation_created', 'plan_selected', 'payment_completed', 'in_progress', 'completed', 'cancelled'],
-    default: 'initiated'
+    enum: ['quotation_submitted', 'quotation_raised', 'initiated', 'documentation_created', 'plan_selected', 'payment_completed', 'in_progress', 'completed', 'cancelled'],
+    default: 'quotation_submitted'
   },
   
   paymentStatus: {

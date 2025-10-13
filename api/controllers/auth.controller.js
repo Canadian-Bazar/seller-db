@@ -120,7 +120,7 @@ export const loginController = async (req, res) => {
       { email: req.email },
       { phone: req.phoneNumber }
       ]
-    }).select('password loginAttempts blockExpires approvalStatus')
+    }).select('+password +loginAttempts +blockExpires +approvalStatus')
 
 
 
