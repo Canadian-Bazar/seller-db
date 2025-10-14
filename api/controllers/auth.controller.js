@@ -57,7 +57,8 @@ export const signupController = async (req, res) => {
 
     // Fire-and-forget: create corresponding buyer account in buyer-db
     try {
-      const buyerServiceUrl = process.env.BUYER_SERVICE_URL || 'http://localhost:8001'
+      // Use the same default as other internal calls (buyer service dev default: 5001)
+      const buyerServiceUrl = process.env.BUYER_SERVICE_URL || 'http://localhost:5001'
       const internalSecret = process.env.INTERNAL_SHARED_SECRET
       const payload = JSON.stringify({
         fullName: req.companyName,
@@ -132,12 +133,7 @@ export const loginController = async (req, res) => {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
     }
 
-    if (seller.approvalStatus !== 'approved') {
-      throw buildErrorObject(
-        httpStatus.UNAUTHORIZED, 
-        `Your seller account's approval is ${seller.approvalStatus}.`
-      )
-    }
+    // Allow login regardless of approvalStatus; routing will handle pending/verification flows
 
     if (!await bcrypt.compare(req.password, seller.password)) {
       const loginAttempts = seller.loginAttempts || 0 + 1

@@ -139,11 +139,13 @@ export const updateProfile = async (req, res) => {
     if (isProfileComplete) {
       await Seller.findByIdAndUpdate(
         sellerId,
-        { isProfileComplete: true },
+        { isProfileComplete: true, approvalStatus: 'submitted', isVerified: false },
         { new: true }
       );
       
       updatedSeller.isProfileComplete = true;
+      updatedSeller.approvalStatus = 'submitted';
+      updatedSeller.isVerified = false;
     }
 
     console.log('Final Updated Seller:', updatedSeller);
