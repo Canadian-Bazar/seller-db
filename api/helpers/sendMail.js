@@ -50,7 +50,6 @@ const sendMail = async (
   prefix = 'no-reply',
 ) => {
   try {
-    const sourceEmail = getEmail(isTransactional, prefix);
 
     const command = new SendEmailCommand({
       Source: `"Canadian Bazaar" <${getEmail(isTransactional, prefix)}>`,
