@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // AWS SES - commented out for now
-// import {SendEmailCommand , SESClient} from '@aws-sdk/client-ses'
+import {SendEmailCommand , SESClient} from '@aws-sdk/client-ses'
 import { getEmail } from './email-prefix.js';
 import { sendEmail } from './nodemailer-config.js';
 const __filename = fileURLToPath(import.meta.url);
@@ -20,13 +20,13 @@ const renderTemplate = (template, metaData) => {
 };
 
 // AWS SES Client - commented out for now
-// const sesClient = new SESClient({
-//   region: process.env.AWS_REGION,
-//   credentials: {
-//     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//   },
-// })
+const sesClient = new SESClient({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+})
 
 const prepateTemplate = (template, metaData) => {
   const baseTemplate = readTemplate('base.ejs');
@@ -52,37 +52,35 @@ const sendMail = async (
   try {
     const sourceEmail = getEmail(isTransactional, prefix);
 
-    // AWS SES logic - commented out for now
-    // const command = new SendEmailCommand({
-    //   Source: `"Canadian Bazaar" <${getEmail(isTransactional, prefix)}>`,
-    //   Destination: {
-    //     ToAddresses: [to]
-    //   },
-    //   Message: {
-    //     Subject: {
-    //       Data: metaData.subject || 'no-subject',
-    //       Charset: 'utf-8'
-    //     },
-    //     Body: {
-    //       Html: {
-    //         Data: prepateTemplate(template, metaData),
-    //         Charset: 'utf-8'
-    //       }
-    //     },
-    //   }
-    // })
-    // const response = await sesClient.send(command)
+    const command = new SendEmailCommand({
+      Source: `"Canadian Bazaar" <${getEmail(isTransactional, prefix)}>`,
+      Destination: {
+        ToAddresses: [to]
+      },
+      Message: {
+        Subject: {
+          Data: metaData.subject || 'no-subject',
+          Charset: 'utf-8'
+        },
+        Body: {
+          Html: {
+            Data: prepateTemplate(template, metaData),
+            Charset: 'utf-8'
+          }
+        },
+      }
+    })
+    const response = await sesClient.send(command)
     // console.log(response)
 
-    // Using nodemailer instead
-    const mailOptions = {
-      to,
-      subject: metaData.subject || 'no-subject',
-      html: prepateTemplate(template, metaData),
-    };
+    // // Using nodemailer instead
+    // const mailOptions = {
+    //   to,
+    //   subject: metaData.subject || 'no-subject',
+    //   html: prepateTemplate(template, metaData),
+    // };
 
-    const response = await sendEmail(mailOptions);
-    console.log('Email sent successfully:', response.messageId);
+    // const response = await sendEmail(mailOptions);
     return response;
   } catch (err) {
     console.error('Error sending email:', err);
