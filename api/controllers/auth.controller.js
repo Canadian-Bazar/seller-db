@@ -53,7 +53,52 @@ export const signupController = async (req, res) => {
     }
     req.roleId = sellerRole._id
 
-    await Seller.create(req)
+    const newSeller = await Seller.create(req)
+
+    // Send admin notification email about new seller registration
+    try {
+      const registrationTime = new Date().toLocaleTimeString('en-US', { 
+        timeZone: 'America/Toronto',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true 
+      });
+      const registrationDate = new Date().toLocaleDateString('en-US', { 
+        timeZone: 'America/Toronto',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // Get client IP and user agent
+      const registrationIp = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+      
+      // Admin email configuration
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@canadian-bazaar.com';
+      const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers`;
+      const approveUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/approve`;
+      const rejectUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/reject`;
+      
+      await sendMail(adminEmail, 'admin-seller-signup-notification.ejs', {
+        companyName: req.companyName,
+        email: req.email,
+        phone: req.phone || req.phoneNumber,
+        businessNumber: req.businessNumber || 'Not provided',
+        registrationDate,
+        registrationTime,
+        sellerId: newSeller._id,
+        registrationIp,
+        userAgent: userAgent.substring(0, 100), // Truncate for email
+        adminDashboardUrl,
+        approveUrl,
+        rejectUrl,
+        subject: `New Seller Registration: ${req.companyName} - Action Required`
+      });
+    } catch (emailError) {
+      // Log the error but don't fail the signup
+      console.error('Failed to send admin notification email:', emailError);
+    }
 
     // Fire-and-forget: create corresponding buyer account in buyer-db
     try {
@@ -164,6 +209,56 @@ export const loginController = async (req, res) => {
       throw buildErrorObject(httpStatus.UNAUTHORIZED, 'No Such Seller Exists')
     }
     seller.role = 'seller'
+    
+    // Send login notification email
+    try {
+      const loginTime = new Date().toLocaleTimeString('en-US', { 
+        timeZone: 'America/Toronto',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true 
+      });
+      const loginDate = new Date().toLocaleDateString('en-US', { 
+        timeZone: 'America/Toronto',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      
+      // Get client IP and basic device info
+      const ipAddress = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+      const userAgent = req.headers['user-agent'] || 'Unknown';
+      const device = userAgent.includes('Mobile') ? 'Mobile Device' : 
+                    userAgent.includes('Tablet') ? 'Tablet' : 'Desktop';
+      
+      // Basic location detection (you can enhance this with IP geolocation service)
+      const location = 'Canada'; // Default location, can be enhanced with IP geolocation
+      
+      // Check if this is a recognized device (basic device fingerprinting)
+      const deviceFingerprint = `${userAgent}-${ipAddress}`;
+      // For now, we'll assume all devices are recognized, but you can implement
+      // device tracking by storing device fingerprints in the database
+      const isRecognizedDevice = true;
+      
+      const changePasswordUrl = `${process.env.FRONTEND_URL || 'https://seller.canadian-bazaar.com'}/profile`;
+      
+      await sendMail(seller.email, 'login-notification.ejs', {
+        companyName: seller.companyName,
+        loginTime,
+        loginDate,
+        ipAddress,
+        location,
+        device,
+        isRecognizedDevice,
+        changePasswordUrl,
+        userAgent: userAgent.substring(0, 100), // Truncate for email
+        subject: 'Security Alert: New Login to Your Account'
+      });
+    } catch (emailError) {
+      // Log the error but don't fail the login
+      console.error('Failed to send login notification email:', emailError);
+    }
+    
     const { sellerAccessToken, sellerRefreshToken  } = generateTokens(seller)
     res
        .cookie('sellerAccessToken', sellerAccessToken, getCookieOptions())
@@ -770,6 +865,51 @@ try {
       })
 
         await newSeller.save();
+
+        // Send admin notification email about new seller registration
+        try {
+          const registrationTime = new Date().toLocaleTimeString('en-US', { 
+            timeZone: 'America/Toronto',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true 
+          });
+          const registrationDate = new Date().toLocaleDateString('en-US', { 
+            timeZone: 'America/Toronto',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+          
+          // Get client IP and user agent
+          const registrationIp = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
+          const userAgent = req.headers['user-agent'] || 'Unknown';
+          
+          // Admin email configuration
+          const adminEmail = process.env.ADMIN_EMAIL || 'admin@canadian-bazaar.com';
+          const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers`;
+          const approveUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/approve`;
+          const rejectUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/reject`;
+          
+          await sendMail(adminEmail, 'admin-seller-signup-notification.ejs', {
+            companyName: verification.companyName,
+            email: verification.email,
+            phone: verification.phoneNumber,
+            businessNumber: 'Not provided',
+            registrationDate,
+            registrationTime,
+            sellerId: newSeller._id,
+            registrationIp,
+            userAgent: userAgent.substring(0, 100), // Truncate for email
+            adminDashboardUrl,
+            approveUrl,
+            rejectUrl,
+            subject: `New Seller Registration: ${verification.companyName} - Action Required`
+          });
+        } catch (emailError) {
+          // Log the error but don't fail the signup
+          console.error('Failed to send admin notification email:', emailError);
+        }
 
         // Fire-and-forget: create corresponding buyer account in buyer-db
         try {

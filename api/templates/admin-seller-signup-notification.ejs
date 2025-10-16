@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Seller Registration - Canadian Bazaar Admin</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        .alert-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .seller-details {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .seller-details h3 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        .detail-row {
+            display: flex;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-label {
+            font-weight: bold;
+            width: 150px;
+            color: #555;
+        }
+        .detail-value {
+            flex: 1;
+            color: #333;
+        }
+        .button {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #c0392b;
+        }
+        .button.approve {
+            background-color: #28a745;
+        }
+        .button.approve:hover {
+            background-color: #218838;
+        }
+        .button.reject {
+            background-color: #dc3545;
+        }
+        .button.reject:hover {
+            background-color: #c82333;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .action-buttons {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status-verified {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .priority-high {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Canadian Bazaar Admin</div>
+            <h1>New Seller Registration</h1>
+        </div>
+
+        <div class="alert-box">
+            <strong>🔔 New Registration Alert:</strong> A new seller has registered and requires your approval.
+        </div>
+
+        <div class="priority-high">
+            <strong>⚠️ Action Required:</strong> Please review the seller details below and approve or reject their registration.
+        </div>
+
+        <div class="seller-details">
+            <h3>📋 Seller Information</h3>
+            
+            <div class="detail-row">
+                <div class="detail-label">Company Name:</div>
+                <div class="detail-value"><strong><%= companyName %></strong></div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Email:</div>
+                <div class="detail-value"><%= email %></div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Phone:</div>
+                <div class="detail-value"><%= phone %></div>
+            </div>
+            
+            <% if (businessNumber) { %>
+            <div class="detail-row">
+                <div class="detail-label">Business Number:</div>
+                <div class="detail-value"><%= businessNumber %></div>
+            </div>
+            <% } %>
+            
+            <div class="detail-row">
+                <div class="detail-label">Registration Date:</div>
+                <div class="detail-value"><%= registrationDate %></div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Registration Time:</div>
+                <div class="detail-value"><%= registrationTime %></div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                    <span class="status-badge status-pending">Pending Approval</span>
+                </div>
+            </div>
+            
+            <div class="detail-row">
+                <div class="detail-label">Verification:</div>
+                <div class="detail-value">
+                    <span class="status-badge status-pending">Not Verified</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <strong>📝 Next Steps:</strong>
+            <ul>
+                <li>Review the seller's information for completeness</li>
+                <li>Verify business credentials if provided</li>
+                <li>Check for any red flags or suspicious information</li>
+                <li>Approve or reject the registration</li>
+                <li>Contact the seller if additional information is needed</li>
+            </ul>
+        </div>
+
+        <div class="action-buttons">
+            <h3>🎯 Quick Actions</h3>
+            <p>Click the buttons below to take action on this registration:</p>
+            
+            <a href="<%= adminDashboardUrl %>" class="button approve">✅ Review in Admin Panel</a>
+            <a href="<%= approveUrl %>" class="button approve">✅ Approve Registration</a>
+            <a href="<%= rejectUrl %>" class="button reject">❌ Reject Registration</a>
+        </div>
+
+        <div class="info-box">
+            <strong>🔍 Additional Information:</strong>
+            <ul>
+                <li><strong>Seller ID:</strong> <%= sellerId %></li>
+                <li><strong>Registration IP:</strong> <%= registrationIp %></li>
+                <li><strong>User Agent:</strong> <%= userAgent %></li>
+                <% if (referralSource) { %>
+                <li><strong>Referral Source:</strong> <%= referralSource %></li>
+                <% } %>
+            </ul>
+        </div>
+
+        <p><strong>Note:</strong> This is an automated notification from the Canadian Bazaar seller registration system. Please review the seller's information and take appropriate action.</p>
+
+        <div class="footer">
+            <p>This is an automated notification from Canadian Bazaar Admin Panel.</p>
+            <p>For support, contact the development team or check the admin dashboard.</p>
+            <p>© <%= new Date().getFullYear() %> Canadian Bazaar. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

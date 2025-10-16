@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Notification - Canadian Bazaar</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #e74c3c;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #f39c12;
+        }
+        .info-box {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        .login-details {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #c0392b;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .security-tips {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .security-tips h3 {
+            color: #e74c3c;
+            margin-top: 0;
+        }
+        .security-tips ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .security-tips li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Canadian Bazaar</div>
+            <h1>Login Notification</h1>
+        </div>
+
+        <div class="alert-box">
+            <strong>🔒 Security Alert:</strong> Someone has logged into your Canadian Bazaar seller account.
+        </div>
+
+        <p>Hello <strong><%= companyName %></strong>,</p>
+
+        <p>We're writing to inform you that there was a login to your Canadian Bazaar seller account.</p>
+
+        <div class="login-details">
+            <h3>Login Details:</h3>
+            <p><strong>Time:</strong> <%= loginTime %></p>
+            <p><strong>Date:</strong> <%= loginDate %></p>
+            <p><strong>IP Address:</strong> <%= ipAddress %></p>
+            <p><strong>Location:</strong> <%= location %></p>
+            <p><strong>Device:</strong> <%= device %></p>
+            <% if (userAgent) { %>
+            <p><strong>Browser:</strong> <%= userAgent %></p>
+            <% } %>
+        </div>
+
+        <% if (!isRecognizedDevice) { %>
+        <div class="info-box">
+            <strong>⚠️ Unrecognized Device:</strong> This login appears to be from a device or location we haven't seen before.
+        </div>
+        <% } %>
+
+        <div class="security-tips">
+            <h3>🛡️ Security Tips:</h3>
+            <ul>
+                <li>If this was you, no action is needed</li>
+                <li>If this wasn't you, change your password immediately</li>
+                <li>Use a strong, unique password</li>
+                <li>Enable two-factor authentication if available</li>
+                <li>Never share your login credentials</li>
+            </ul>
+        </div>
+
+        <p>If you didn't make this login attempt, please:</p>
+        <ol>
+            <li>Change your password immediately</li>
+            <li>Check your account for any unauthorized activity</li>
+            <li>Contact our support team if you notice anything suspicious</li>
+        </ol>
+
+        <div style="text-align: center;">
+            <a href="<%= changePasswordUrl %>" class="button">Change Password</a>
+        </div>
+        
+        <p><strong>Note:</strong> You can also change your password by going to your Profile page and clicking on the "Change Password" option.</p>
+
+        <p>If you have any concerns about your account security, please contact our support team immediately.</p>
+
+        <div class="footer">
+            <p>This is an automated security notification from Canadian Bazaar.</p>
+            <p>For support, contact us at: <a href="mailto:support@canadian-bazaar.com">support@canadian-bazaar.com</a></p>
+            <p>© <%= new Date().getFullYear() %> Canadian Bazaar. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
