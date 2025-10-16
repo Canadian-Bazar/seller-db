@@ -72,10 +72,10 @@ export const signupController = async (req, res) => {
       
       // Get client IP and user agent
       const registrationIp = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'Unknown';
-      const userAgent = req.headers['user-agent'] || 'Unknown';
+      const userAgent = req.headers['user-zagent'] || 'Unknown';
       
       // Admin email configuration
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@canadian-bazaar.com';
+      const adminEmail = process.env.ADMIN_EMAIL || 'pulkit@canadian-bazaar.com';
       const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers`;
       const approveUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/approve`;
       const rejectUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/reject`;
@@ -886,7 +886,7 @@ try {
           const userAgent = req.headers['user-agent'] || 'Unknown';
           
           // Admin email configuration
-          const adminEmail = process.env.ADMIN_EMAIL || 'admin@canadian-bazaar.com';
+          const adminEmail = process.env.ADMIN_EMAIL || 'pulkit@canadian-bazaar.com';
           const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers`;
           const approveUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/approve`;
           const rejectUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers/${newSeller._id}/reject`;
