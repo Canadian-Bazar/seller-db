@@ -16,6 +16,9 @@ import storeMessageInRedis from '../helpers/storeMessageInRedis.js';
 import sendNotification from '../helpers/sendNotification.js';
 import ServiceQuotation from '../models/service-quotations.schema.js'
 import ServiceChat from '../models/service-chat.schema.js'
+import Product from '../models/products.schema.js'
+import Service from '../models/service.schema.js'
+import sendMail from '../helpers/sendMail.js';
 
 
 
@@ -249,6 +252,31 @@ export const generateInvoice = async (req, res) => {
             await sendNotification(notificationData);
         } catch (notificationError) {
             console.error('Notification error (non-blocking):', notificationError);
+        }
+
+        // 📧 Send email notification to buyer
+        try {
+            const product = await Product.findById(quotation.productId).select('name').lean();
+            const buyer = await Buyer.findById(quotation.buyer).select('fullName email').lean();
+            const seller = await Seller.findById(sellerId).select('companyName').lean();
+            
+            if (buyer && buyer.email) {
+                const invoiceUrl = `${process.env.BUYER_FRONTEND_URL || 'https://buyer.canadian-bazaar.ca'}/invoice/${token}`;
+                
+                await sendMail(buyer.email, 'invoice-generated.ejs', {
+                    buyerName: buyer.fullName,
+                    sellerName: seller?.companyName || 'Seller',
+                    invoiceNumber: invoiceNumber,
+                    productName: product?.name || 'Product/Service',
+                    totalAmount: totalAmount,
+                    currency: validatedData.currency || 'CAD',
+                    dueDate: dueDate,
+                    invoiceUrl: invoiceUrl,
+                    subject: `Invoice #${invoiceNumber} from ${seller?.companyName || 'Seller'}`
+                });
+            }
+        } catch (emailError) {
+            console.error('Email notification error (non-blocking):', emailError);
         }
 
         res.status(httpStatus.CREATED).json(

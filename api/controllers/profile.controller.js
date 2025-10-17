@@ -146,6 +146,29 @@ export const updateProfile = async (req, res) => {
       updatedSeller.isProfileComplete = true;
       updatedSeller.approvalStatus = 'submitted';
       updatedSeller.isVerified = false;
+
+      // 📧 Send notification email to admin that seller profile is ready for review
+      try {
+        const adminEmail = process.env.ADMIN_EMAIL || 'pulkit@canadian-bazaar.com';
+        const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/sellers`;
+        const submissionDate = new Date().toLocaleDateString('en-US', { 
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        await sendMail(adminEmail, 'seller-profile-submitted.ejs', {
+          companyName: updatedSeller.companyName,
+          email: updatedSeller.email,
+          phone: updatedSeller.phone || 'Not provided',
+          businessNumber: updatedSeller.businessNumber || 'Not provided',
+          submissionDate: submissionDate,
+          adminDashboardUrl: adminDashboardUrl,
+          subject: `Seller Profile Ready for Review: ${updatedSeller.companyName}`
+        });
+      } catch (emailError) {
+        console.error('Failed to send profile submission notification:', emailError);
+      }
     }
 
     console.log('Final Updated Seller:', updatedSeller);

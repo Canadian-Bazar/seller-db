@@ -55,6 +55,19 @@ export const signupController = async (req, res) => {
 
     const newSeller = await Seller.create(req)
 
+    // Send welcome email to seller
+    try {
+      const dashboardUrl = `${process.env.FRONTEND_URL || 'https://seller.canadian-bazaar.ca'}/dashboard`;
+      
+      await sendMail(req.email, 'welcome-seller.ejs', {
+        companyName: req.companyName,
+        dashboardUrl: dashboardUrl,
+        subject: 'Welcome to Canadian Bazaar! 🎉'
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email to seller:', emailError);
+    }
+
     // Send admin notification email about new seller registration
     try {
       const registrationTime = new Date().toLocaleTimeString('en-US', { 

@@ -11,6 +11,8 @@ import WebsiteDocumentation from '../models/website-documentation.schema.js'
 import WebsiteProject from '../models/website-project.schema.js'
 import WebsiteProjectChat from '../models/website-project-chat.schema.js'
 import mongoose from 'mongoose'
+import sendMail from '../helpers/sendMail.js'
+import Seller from '../models/seller.schema.js'
 
 
 
@@ -156,6 +158,40 @@ export const createWebsiteQuotationController = async (req, res) => {
       status: 'active'
     });
     await websiteProjectChat.save();
+
+    // 📧 Send email notification to admin about new website quotation request
+    try {
+      const seller = await Seller.findById(userId).select('companyName email').lean();
+      const adminEmail = process.env.ADMIN_EMAIL || 'pulkit@canadian-bazaar.com';
+      const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/website-quotations`;
+      const submissionDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      // Get item type display text
+      let itemsSoldDisplay = itemsSold === 'both' ? 'Products and Services' 
+                           : itemsSold === 'service' ? 'Services' 
+                           : 'Products';
+
+      await sendMail(adminEmail, 'website-quotation-submitted.ejs', {
+        companyName: seller?.companyName || 'Unknown',
+        email: seller?.email || 'Not provided',
+        domainName: domainName,
+        categoryName: categoryExists?.name || 'Unknown',
+        itemsSold: itemsSoldDisplay,
+        referenceUrl: referenceurl || null,
+        additionalDetails: additionalDetails || null,
+        submissionDate: submissionDate,
+        adminDashboardUrl: adminDashboardUrl,
+        subject: `New Website Quotation: ${domainName} - ${seller?.companyName || 'Seller'}`
+      });
+    } catch (emailError) {
+      console.error('Failed to send website quotation notification to admin:', emailError);
+    }
 
     return res.status(httpStatus.CREATED).json(buildResponse(httpStatus.CREATED,
       'Website quotation created successfully', {

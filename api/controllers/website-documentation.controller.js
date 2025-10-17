@@ -9,6 +9,7 @@ import jwt, { decode } from 'jsonwebtoken'
 import SellerSubscription from '../models/seller-subscription.schema.js'
 import mongoose from "mongoose";
 import Seller from '../models/seller.schema.js'
+import sendMail from '../helpers/sendMail.js'
 
 
 
@@ -67,8 +68,32 @@ export const rejectWebsiteDocumentationController = async (req, res) => {
 
       await websiteDocumentation.save();
 
-      // TODO: Send socket event to admin about documentation rejection
-      // This will notify admin to create new documentation
+      // 📧 Send email notification to admin about documentation rejection
+      try {
+        const seller = websiteDocumentation.websiteQuotationId?.seller;
+        const adminEmail = process.env.ADMIN_EMAIL || 'pulkit@canadian-bazaar.com';
+        const adminDashboardUrl = `${process.env.ADMIN_FRONTEND_URL || 'https://admin.canadian-bazaar.com'}/website-quotations`;
+        const rejectionDate = new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        await sendMail(adminEmail, 'website-documentation-rejected.ejs', {
+          companyName: seller?.companyName || 'Unknown',
+          email: seller?.email || 'Not provided',
+          domainName: websiteDocumentation.websiteQuotationId?.domainName || 'Unknown',
+          rejectionReason: rejectionReason,
+          feedback: feedback || null,
+          rejectionDate: rejectionDate,
+          adminDashboardUrl: adminDashboardUrl,
+          subject: `Website Documentation Rejected: ${seller?.companyName || 'Seller'}`
+        });
+      } catch (emailError) {
+        console.error('Failed to send documentation rejection notification to admin:', emailError);
+      }
 
       return res.status(httpStatus.OK).json(buildResponse(httpStatus.OK, 
         'Documentation rejected successfully. Admin has been notified to provide updated documentation.', 
