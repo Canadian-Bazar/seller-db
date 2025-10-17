@@ -115,7 +115,6 @@ export const signupController = async (req, res) => {
 
     // Fire-and-forget: create corresponding buyer account in buyer-db
     try {
-      // Use the same default as other internal calls (buyer service dev default: 5001)
       const buyerServiceUrl = process.env.BUYER_SERVICE_URL || 'http://localhost:5001'
       const internalSecret = process.env.INTERNAL_SHARED_SECRET
       const payload = JSON.stringify({
@@ -146,12 +145,14 @@ export const signupController = async (req, res) => {
         r.on('end', () => {
           const body = Buffer.concat(chunks).toString('utf8')
           if (r.statusCode && r.statusCode >= 300) {
-            console.warn('[buyer-sync] create (simple) status:', r.statusCode, 'url:', url.toString(), 'body:', body)
+            console.warn('[buyer-sync] create status:', r.statusCode, 'url:', url.toString(), 'body:', body)
+          } else {
+            console.log('[buyer-sync] Buyer account created for seller:', req.email)
           }
         })
       })
       reqInternal.on('error', (e) => {
-        console.warn('[buyer-sync] create (simple) request error:', e?.message)
+        console.warn('[buyer-sync] request error:', e?.message)
       })
       reqInternal.write(payload)
       reqInternal.end()
